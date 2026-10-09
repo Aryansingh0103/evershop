@@ -1,25 +1,30 @@
-const path = require('path');
-const { loadFilesSync } = require('@graphql-tools/load-files');
-const { mergeTypeDefs } = require('@graphql-tools/merge');
-const { CONSTANTS } = require('@evershop/evershop/src/lib/helpers');
-const { getEnabledExtensions } = require('../../../../bin/extension');
+import path from 'path';
+import { loadFilesSync } from '@graphql-tools/load-files';
+import { mergeTypeDefs } from '@graphql-tools/merge';
+import { getEnabledExtensions } from '../../../bin/extension/index.js';
+import { CONSTANTS } from '../../../lib/helpers.js';
+import { widgetTypeDefs } from '../../../lib/widget/widgetManager.js';
 
-module.exports.buildTypeDefs = function buildTypeDefs(isAdmin = false) {
+export function buildTypeDefs(isAdmin = false) {
   const typeSources = [
-    path.join(CONSTANTS.MOLDULESPATH, '*/graphql/types/**/*.graphql')
+    path.join(CONSTANTS.MODULESPATH, '*/graphql/types/**/*.graphql')
   ];
 
   const extensions = getEnabledExtensions();
   extensions.forEach((extension) => {
     typeSources.push(path.join(extension.path, 'graphql/types/**/*.graphql'));
   });
-  const typeDefs = mergeTypeDefs(
-    typeSources.map((source) =>
-      loadFilesSync(source, {
-        ignoredExtensions: isAdmin ? [] : ['.admin.graphql']
-      })
-    )
+  const fileTypeDefs = typeSources.map((source) =>
+    loadFilesSync(source, {
+      ignoredExtensions: isAdmin ? [] : ['.admin.graphql']
+    })
   );
 
+  // Inject widget-emitted SDL last so the WidgetSettings union sees every
+  // registered settingsType. Per Phase 2b — `widgetTypeDefs()` always emits a
+  // `_UnregisteredWidgetSettings` sentinel so the union is non-empty even
+  // when no widget has registered a graphql block.
+  const typeDefs = mergeTypeDefs([...fileTypeDefs, widgetTypeDefs()]);
+
   return typeDefs;
-};
+}

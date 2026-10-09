@@ -1,17 +1,11 @@
-const { getConfig } = require('@evershop/evershop/src/lib/util/getConfig');
+import {
+  getDimensionUnit,
+  getWeightUnit
+} from '../../../services/setting.js';
 
-module.exports = {
+export default {
   Setting: {
-    allowedCountries: (setting) => {
-      const allowedCountries = setting.find(
-        (s) => s.name === 'allowedCountries'
-      );
-      if (allowedCountries && allowedCountries.value) {
-        return JSON.parse(allowedCountries.value);
-      } else {
-        return ['US'];
-      }
-    },
-    weightUnit: () => getConfig('shop.weightUnit', 'kg')
+    weightUnit: () => getWeightUnit(),
+    dimensionUnit: () => getDimensionUnit()
   }
 };

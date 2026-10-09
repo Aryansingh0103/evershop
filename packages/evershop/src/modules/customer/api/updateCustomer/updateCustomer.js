@@ -1,19 +1,15 @@
-const { update, select } = require('@evershop/postgres-query-builder');
-const {
-  getConnection
-} = require('@evershop/evershop/src/lib/postgres/connection');
-const { buildUrl } = require('@evershop/evershop/src/lib/router/buildUrl');
-const {
-  OK,
+import { select, update } from '@evershop/postgres-query-builder';
+import { translate } from '../../../../lib/locale/translate/translate.js';
+import { getConnection } from '../../../../lib/postgres/connection.js';
+import { buildUrl } from '../../../../lib/router/buildUrl.js';
+import {
   INTERNAL_SERVER_ERROR,
-  INVALID_PAYLOAD
-} = require('@evershop/evershop/src/lib/util/httpStatus');
-const {
-  hashPassword
-} = require('@evershop/evershop/src/lib/util/passwordHelper');
+  INVALID_PAYLOAD,
+  OK
+} from '../../../../lib/util/httpStatus.js';
+import { hashPassword } from '../../../../lib/util/passwordHelper.js';
 
-// eslint-disable-next-line no-unused-vars
-module.exports = async (request, response, delegate, next) => {
+export default async (request, response, next) => {
   const connection = await getConnection();
   try {
     const customer = await select()
@@ -26,7 +22,7 @@ module.exports = async (request, response, delegate, next) => {
       response.json({
         error: {
           status: INVALID_PAYLOAD,
-          message: 'Invalid customer id'
+          message: translate('Invalid customer id')
         }
       });
       return;

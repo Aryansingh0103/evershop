@@ -1,11 +1,9 @@
-const { buildUrl } = require('@evershop/evershop/src/lib/router/buildUrl');
-const { camelCase } = require('@evershop/evershop/src/lib/util/camelCase');
-const {
-  getCustomersBaseQuery
-} = require('../../../services/getCustomersBaseQuery');
-const { CustomerCollection } = require('../../../services/CustomerCollection');
+import { buildUrl } from '../../../../../lib/router/buildUrl.js';
+import { camelCase } from '../../../../../lib/util/camelCase.js';
+import { CustomerCollection } from '../../../services/CustomerCollection.js';
+import { getCustomersBaseQuery } from '../../../services/getCustomersBaseQuery.js';
 
-module.exports = {
+export default {
   Query: {
     customer: async (root, { id }, { pool }) => {
       const query = getCustomersBaseQuery();
@@ -23,6 +21,9 @@ module.exports = {
   Customer: {
     editUrl: ({ uuid }) => buildUrl('customerEdit', { id: uuid }),
     updateApi: (customer) => buildUrl('updateCustomer', { id: customer.uuid }),
-    deleteApi: (customer) => buildUrl('deleteCustomer', { id: customer.uuid })
+    deleteApi: (customer) => buildUrl('deleteCustomer', { id: customer.uuid }),
+    metaData: (customer) => customer.metaData ?? {},
+    updateMetafieldsApi: (customer) =>
+      buildUrl('updateCustomerMetafields', { id: customer.uuid })
   }
 };

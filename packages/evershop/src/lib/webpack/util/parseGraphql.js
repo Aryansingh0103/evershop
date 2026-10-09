@@ -1,29 +1,36 @@
-const fs = require('fs');
-const uniqid = require('uniqid');
-const JSON5 = require('json5');
-const { CONSTANTS } = require('../../helpers');
-const { parseGraphqlByFile } = require('./parseGraphqlByFile');
+import fs from 'fs';
+import JSON5 from 'json5';
+import uniqid from 'uniqid';
+import { isResolvable } from '../../util/isResolvable.js';
+import { generateComponentKey } from '../../util/keyGenerator.js';
+import { parseGraphqlByFile } from './parseGraphqlByFile.js';
 
-module.exports.parseGraphql = function parseGraphql(modules) {
+export function parseGraphql(modules) {
   let inUsedFragments = [];
   const propsMap = {};
-  let queryStr = '';
+  let queries = {};
   let fragmentStr = '';
-  const variables = {
-    values: {},
-    defs: []
-  };
-
+  const variableList = {};
   modules.forEach((module) => {
-    if (!fs.existsSync(module)) {
+    if (!fs.existsSync(module) && !isResolvable(module)) {
       return;
     }
-
-    const moduleKey = Buffer.from(
-      module.replace(CONSTANTS.ROOTPATH, '')
-    ).toString('base64');
-    const moduleGraphqlData = parseGraphqlByFile(module);
-    queryStr += `\n${moduleGraphqlData.query.source}`;
+    const variables = {
+      values: {},
+      defs: []
+    };
+    let modulePath;
+    let moduleKey;
+    // If the module is resolvable, get the apsolute path
+    if (!fs.existsSync(module)) {
+      modulePath = new URL(import.meta.resolve(module)).pathname;
+      moduleKey = generateComponentKey(module);
+    } else {
+      modulePath = module;
+      moduleKey = generateComponentKey(modulePath);
+    }
+    const moduleGraphqlData = parseGraphqlByFile(modulePath);
+    queries[moduleKey] = moduleGraphqlData.query.source;
     fragmentStr += `\n${moduleGraphqlData.fragments.source}`;
     Object.assign(
       variables.values,
@@ -32,6 +39,7 @@ module.exports.parseGraphql = function parseGraphql(modules) {
     variables.defs = variables.defs.concat(
       moduleGraphqlData.variables.definitions
     );
+    variableList[moduleKey] = variables;
     propsMap[moduleKey] = moduleGraphqlData.query.props;
     inUsedFragments = inUsedFragments.concat(moduleGraphqlData.fragments.pairs);
   });
@@ -46,7 +54,10 @@ module.exports.parseGraphql = function parseGraphql(modules) {
     if (f) {
       // Replace fragment alias with the one already processed
       const regex = new RegExp(`\\.\\.\\.([ ]+)?${fragment.alias}`, 'g');
-      queryStr = queryStr.replace(regex, `...${f.alias}`);
+      queries = Object.keys(queries).reduce((acc, key) => {
+        acc[key] = queries[key].replace(regex, `...${f.alias}`);
+        return acc;
+      }, {});
       fragmentStr = fragmentStr.replace(regex, `...${f.alias}`);
     } else {
       const regex = new RegExp(
@@ -80,9 +91,9 @@ module.exports.parseGraphql = function parseGraphql(modules) {
   });
 
   return {
-    query: queryStr,
+    queries,
     fragments: fragmentStr,
-    variables: JSON5.stringify(variables),
+    variables: variableList,
     propsMap
   };
-};
+}

@@ -1,6 +1,6 @@
-const { getConfig } = require('@evershop/evershop/src/lib/util/getConfig');
+import { getConfig } from '../../../../../lib/util/getConfig.js';
 
-module.exports = {
+export default {
   Setting: {
     paypalPaymentStatus: (setting) => {
       const paypalConfig = getConfig('system.paypal', {});
@@ -56,17 +56,19 @@ module.exports = {
         return null;
       }
     },
-    paypalWebhookSecret: (setting, _, { user }) => {
+    paypalWebhookId: (setting, _, { user }) => {
+      // A webhook id is an identifier, not a secret — show the config value
+      // as-is so the admin can see which webhook is wired.
       const paypalConfig = getConfig('system.paypal', {});
-      if (paypalConfig.webhookSecret) {
-        return '*******************************';
+      if (paypalConfig.webhookId) {
+        return paypalConfig.webhookId;
       }
       if (user) {
-        const paypalWebhookSecret = setting.find(
-          (s) => s.name === 'paypalWebhookSecret'
+        const paypalWebhookId = setting.find(
+          (s) => s.name === 'paypalWebhookId'
         );
-        if (paypalWebhookSecret) {
-          return paypalWebhookSecret.value;
+        if (paypalWebhookId) {
+          return paypalWebhookId.value;
         } else {
           return null;
         }

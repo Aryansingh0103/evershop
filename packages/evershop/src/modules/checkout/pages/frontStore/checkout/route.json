@@ -1,4 +1,6 @@
 {
   "methods": ["GET"],
-  "path": "/checkout"
+  "path": "/checkout",
+  "name": "Checkout page",
+  "editable": true
 }

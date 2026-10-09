@@ -1,12 +1,11 @@
-const {
-  INVALID_PAYLOAD
-} = require('@evershop/evershop/src/lib/util/httpStatus');
+import { translate } from '../../../../lib/locale/translate/translate.js';
+import { INVALID_PAYLOAD } from '../../../../lib/util/httpStatus.js';
 
-module.exports = async (request, response, delegate, next) => {
+export default async (request, response, next) => {
   if (!request.body.coupon || !/^\S*$/.test(request.body.coupon)) {
     return response.status(INVALID_PAYLOAD).json({
       error: {
-        message: 'Invalid coupon',
+        message: translate('Invalid coupon'),
         status: INVALID_PAYLOAD
       }
     });

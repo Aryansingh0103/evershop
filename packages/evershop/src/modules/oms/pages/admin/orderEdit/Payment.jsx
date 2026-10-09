@@ -1,15 +1,19 @@
+import Area from '@components/common/Area.js';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle
+} from '@components/common/ui/Card.js';
+import { Circle } from '@components/common/ui/Circle.js';
+import { _ } from '@evershop/evershop/lib/locale/translate/_';
 import PropTypes from 'prop-types';
 import React from 'react';
-import Area from '@components/common/Area';
-import Circle from '@components/common/Circle';
-import { Card } from '@components/admin/cms/Card';
-import './Payment.scss';
-import { Discount } from '@components/admin/oms/orderEdit/payment/Discount';
-import { Shipping } from '@components/admin/oms/orderEdit/payment/Shipping';
-import { SubTotal } from '@components/admin/oms/orderEdit/payment/SubTotal';
-import { Tax } from '@components/admin/oms/orderEdit/payment/Tax';
-import { Total } from '@components/admin/oms/orderEdit/payment/Total';
-import { Transactions } from '@components/admin/oms/orderEdit/payment/Transactions';
+import { Discount } from './payment/Discount.js';
+import { Shipping } from './payment/Shipping.js';
+import { SubTotal } from './payment/SubTotal.js';
+import { Tax } from './payment/Tax.js';
+import { Total } from './payment/Total.js';
 
 export default function OrderSummary({
   order: {
@@ -18,28 +22,30 @@ export default function OrderSummary({
     shippingMethodName,
     paymentMethodName,
     totalQty,
-    taxAmount,
+    totalTaxAmount,
     discountAmount,
     grandTotal,
     subTotal,
     shippingFeeInclTax,
     currency,
-    paymentStatus,
-    transactions
+    paymentStatus
   }
 }) {
   return (
-    <Card
-      title={
-        <div className="flex space-x-1">
-          <Circle variant={paymentStatus.badge} />
-          <span className="block self-center">
-            {paymentMethodName || 'Unknown'}
-          </span>
-        </div>
-      }
-    >
-      <Card.Session>
+    <Card>
+      <CardHeader>
+        <CardTitle>
+          <div className="flex space-x-2">
+            <Circle variant={paymentStatus.badge} />
+            <span className="block self-center">
+              {`${paymentStatus.name || _('Unknown')} - ${
+                paymentMethodName || _('Unknown')
+              }`}
+            </span>
+          </div>
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
         <Area
           id="orderSummaryBlock"
           orderId={orderId}
@@ -47,8 +53,8 @@ export default function OrderSummary({
           grandTotal={grandTotal}
           coupon={coupon}
           discountAmount={discountAmount}
-          taxAmount={taxAmount}
-          className="summary-wrapper"
+          totalTaxAmount={totalTaxAmount}
+          className="space-y-3"
           coreComponents={[
             {
               component: { default: SubTotal },
@@ -70,7 +76,7 @@ export default function OrderSummary({
             },
             {
               component: { default: Tax },
-              props: { taxClass: '', amount: taxAmount.text },
+              props: { taxClass: '', amount: totalTaxAmount.text },
               sortOrder: 20
             },
 
@@ -81,11 +87,8 @@ export default function OrderSummary({
             }
           ]}
         />
-      </Card.Session>
-      <Card.Session>
-        <Transactions transactions={transactions} />
-      </Card.Session>
-      <Area id="orderPaymentActions" noOuter />
+      </CardContent>
+      <Area id="orderPaymentActions" />
     </Card>
   );
 }
@@ -97,7 +100,7 @@ OrderSummary.propTypes = {
     coupon: PropTypes.string,
     shippingMethod: PropTypes.string,
     paymentMethodName: PropTypes.string,
-    taxAmount: PropTypes.shape({
+    totalTaxAmount: PropTypes.shape({
       text: PropTypes.string.isRequired
     }).isRequired,
     discountAmount: PropTypes.shape({
@@ -117,20 +120,8 @@ OrderSummary.propTypes = {
     paymentStatus: PropTypes.shape({
       code: PropTypes.string,
       badge: PropTypes.string,
-      progress: PropTypes.number,
       name: PropTypes.string
-    }).isRequired,
-    transactions: PropTypes.arrayOf(
-      PropTypes.shape({
-        paymentTransactionId: PropTypes.string.isRequired,
-        amount: PropTypes.shape({
-          text: PropTypes.string.isRequired,
-          value: PropTypes.number.isRequired
-        }).isRequired,
-        paymentAction: PropTypes.string.isRequired,
-        transactionType: PropTypes.string.isRequired
-      })
-    ).isRequired
+    }).isRequired
   }).isRequired
 };
 
@@ -148,7 +139,7 @@ export const query = `
       shippingMethodName
       paymentMethod
       paymentMethodName
-      taxAmount {
+      totalTaxAmount {
         text(currency: getContextValue("orderCurrency"))
       }
       discountAmount {
@@ -167,17 +158,7 @@ export const query = `
       paymentStatus {
         code
         badge
-        progress
         name
-      }
-      transactions: paymentTransactions {
-        paymentTransactionId
-        amount {
-          text(currency: getContextValue("orderCurrency"))
-          value
-        }
-        paymentAction
-        transactionType
       }
     }
   }

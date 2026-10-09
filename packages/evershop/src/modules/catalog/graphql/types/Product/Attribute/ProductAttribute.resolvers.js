@@ -1,7 +1,7 @@
-const { select } = require('@evershop/postgres-query-builder');
-const { camelCase } = require('@evershop/evershop/src/lib/util/camelCase');
+import { select } from '@evershop/postgres-query-builder';
+import { camelCase } from '../../../../../../lib/util/camelCase.js';
 
-module.exports = {
+export default {
   Product: {
     attributeIndex: async (product, _, { pool, user }) => {
       const query = select().from('product_attribute_value_index');
@@ -20,6 +20,7 @@ module.exports = {
       if (!user) {
         query.andWhere('attribute.display_on_frontend', '=', true);
       }
+      query.orderBy('attribute.sort_order', 'ASC');
       const attributes = await query.execute(pool);
       return attributes.map((a) => camelCase(a));
     },

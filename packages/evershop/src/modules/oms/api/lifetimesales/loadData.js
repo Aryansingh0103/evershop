@@ -1,14 +1,9 @@
-const { select } = require('@evershop/postgres-query-builder');
-const { pool } = require('@evershop/evershop/src/lib/postgres/connection');
-const { getConfig } = require('@evershop/evershop/src/lib/util/getConfig');
+import { select } from '@evershop/postgres-query-builder';
+import { getActiveLocale } from '../../../../lib/locale/localeContext.js';
+import { pool } from '../../../../lib/postgres/connection.js';
+import { getStoreCurrency } from '../../../setting/services/setting.js';
 
-/* eslint-disable no-unused-vars */
-module.exports = async function lifetimeSales(
-  request,
-  response,
-  delegate,
-  next
-) {
+export default async (request, response, next) => {
   const query = select();
   query
     .from('order')
@@ -35,8 +30,9 @@ module.exports = async function lifetimeSales(
       cancelled += 1;
     }
   });
-  const currency = getConfig('shop.currency', 'USD');
-  const language = getConfig('shop.language', 'en');
+  const currency = getStoreCurrency();
+  // Admin request → `adminLanguage`; see getActiveLocale.
+  const language = getActiveLocale();
   const formatedTotal = new Intl.NumberFormat(language, {
     style: 'currency',
     currency

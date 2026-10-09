@@ -1,25 +1,21 @@
-const {
+import {
   select,
   update,
   startTransaction,
   commit,
   rollback
-} = require('@evershop/postgres-query-builder');
-const uniqid = require('uniqid');
-const {
-  pool,
-  getConnection
-} = require('@evershop/evershop/src/lib/postgres/connection');
-const {
+} from '@evershop/postgres-query-builder';
+import uniqid from 'uniqid';
+import { pool, getConnection } from '../../../../lib/postgres/connection.js';
+import {
   OK,
   INTERNAL_SERVER_ERROR,
   INVALID_PAYLOAD
-} = require('@evershop/evershop/src/lib/util/httpStatus');
+} from '../../../../lib/util/httpStatus.js';
 
-// eslint-disable-next-line no-unused-vars
-module.exports = async (request, response, delegate, next) => {
+export default async (request, response, next) => {
   const { id: groupId } = request.params;
-  // eslint-disable-next-line camelcase
+
   const { product_id } = request.body;
   const connection = await getConnection(pool);
   try {
@@ -64,6 +60,29 @@ module.exports = async (request, response, delegate, next) => {
       })
       .where('uuid', '=', product_id)
       .execute(connection, false);
+
+    // A variant group ships in one box — all members share one package_id
+    // (see wiki/package-management-design.md → Variants). Converge at join
+    // time: the joiner adopts the group's package; if the group has none yet
+    // (all legacy) but the joiner has one, the joiner's spreads to the group.
+    const groupMemberWithPackage = await select('package_id')
+      .from('product')
+      .where('variant_group_id', '=', group.variant_group_id)
+      .and('product_id', '<>', product.product_id)
+      .and('package_id', 'IS NOT NULL', null)
+      .load(connection, false);
+    if (groupMemberWithPackage) {
+      await update('product')
+        .given({ package_id: groupMemberWithPackage.package_id })
+        .where('uuid', '=', product_id)
+        .execute(connection, false);
+    } else if (product.package_id) {
+      await update('product')
+        .given({ package_id: product.package_id })
+        .where('variant_group_id', '=', group.variant_group_id)
+        .and('product_id', '<>', product.product_id)
+        .execute(connection, false);
+    }
 
     const variantAttributeIds = Object.values({
       attributeOne: group.attribute_one,

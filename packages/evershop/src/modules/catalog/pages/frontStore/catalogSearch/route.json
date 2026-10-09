@@ -1,4 +1,6 @@
 {
   "methods": ["GET"],
-  "path": "/search"
+  "path": "/search",
+  "name": "Catalog search page",
+  "editable": true
 }

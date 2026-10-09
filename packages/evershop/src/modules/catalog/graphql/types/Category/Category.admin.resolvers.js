@@ -1,13 +1,14 @@
-const { select } = require('@evershop/postgres-query-builder');
-const { buildUrl } = require('@evershop/evershop/src/lib/router/buildUrl');
+import { select } from '@evershop/postgres-query-builder';
+import { buildUrl } from '../../../../../lib/router/buildUrl.js';
 
-module.exports = {
+export default {
   Category: {
     editUrl: (category) => buildUrl('categoryEdit', { id: category.uuid }),
     updateApi: (category) => buildUrl('updateCategory', { id: category.uuid }),
     deleteApi: (category) => buildUrl('deleteCategory', { id: category.uuid }),
     addProductUrl: (category) =>
-      buildUrl('addProductToCategory', { category_id: category.uuid })
+      buildUrl('addProductToCategory', { category_id: category.uuid }),
+    metaData: (category) => category.metaData ?? {}
   },
   Product: {
     removeFromCategoryUrl: async (product, _, { pool }) => {

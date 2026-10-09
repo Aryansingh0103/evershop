@@ -1,15 +1,12 @@
-const { getConfig } = require('@evershop/evershop/src/lib/util/getConfig');
+import { getWeightUnit } from '../../../../setting/services/setting.js';
 
-module.exports = {
+export default {
   Weight: {
     value: (raw) => parseFloat(raw),
-    unit: () => {
-      const unit = getConfig('shop.weightUnit', 'kg');
-      return unit;
-    },
+    unit: () => getWeightUnit(),
     text: (raw) => {
       const weight = parseFloat(raw);
-      const unit = getConfig('shop.weightUnit', 'kg');
+      const unit = getWeightUnit();
       // Localize the weight
       return `${weight} ${unit}`;
     }

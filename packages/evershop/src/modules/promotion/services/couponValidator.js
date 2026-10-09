@@ -1,6 +1,5 @@
-const { select } = require('@evershop/postgres-query-builder');
-const { pool } = require('@evershop/evershop/src/lib/postgres/connection');
-const { getValueSync } = require('@evershop/evershop/src/lib/util/registry');
+import { info } from '../../../lib/log/logger.js';
+import { getValueSync } from '../../../lib/util/registry.js';
 
 /**
  * This method validate a coupon.
@@ -8,13 +7,11 @@ const { getValueSync } = require('@evershop/evershop/src/lib/util/registry');
  * @param {String} couponCode
  * @returns {Boolean}
  */
-async function validateCoupon(cart, couponCode) {
+export async function validateCoupon(cart, couponCode) {
   const validatorFunctions = getValueSync('couponValidatorFunctions', []);
+  const couponLoader = getValueSync('couponLoaderFunction');
   let flag = true;
-  const coupon = await select()
-    .from('coupon')
-    .where('coupon', '=', couponCode)
-    .load(pool);
+  const coupon = await couponLoader(couponCode);
   if (!coupon) {
     return false;
   }
@@ -27,14 +24,10 @@ async function validateCoupon(cart, couponCode) {
           flag = false;
         }
       } catch (e) {
+        info(e);
         flag = false;
       }
     })
   );
-
   return flag;
 }
-
-module.exports = {
-  validateCoupon
-};

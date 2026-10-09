@@ -1,15 +1,16 @@
-const { select } = require('@evershop/postgres-query-builder');
-const {
+import { select } from '@evershop/postgres-query-builder';
+import { translate } from '../../../../lib/locale/translate/translate.js';
+import { pool } from '../../../../lib/postgres/connection.js';
+import {
   INVALID_PAYLOAD,
   INTERNAL_SERVER_ERROR,
   OK
-} = require('@evershop/evershop/src/lib/util/httpStatus');
-const { pool } = require('@evershop/evershop/src/lib/postgres/connection');
-const { setContextValue } = require('../../../graphql/services/contextHelper');
-const { getCartByUUID } = require('../../services/getCartByUUID');
-const { saveCart } = require('../../services/saveCart');
+} from '../../../../lib/util/httpStatus.js';
+import { setContextValue } from '../../../graphql/services/contextHelper.js';
+import { getCartByUUID } from '../../services/getCartByUUID.js';
+import { saveCart } from '../../services/saveCart.js';
 
-module.exports = async (request, response, delegate, next) => {
+export default async (request, response, next) => {
   try {
     const cartId = request.params.cart_id;
     const { sku, qty } = request.body;
@@ -21,7 +22,7 @@ module.exports = async (request, response, delegate, next) => {
       response.json({
         error: {
           status: INVALID_PAYLOAD,
-          message: 'Invalid cart id'
+          message: translate('Invalid cart id')
         }
       });
       return;
@@ -39,7 +40,7 @@ module.exports = async (request, response, delegate, next) => {
       response.json({
         error: {
           status: INVALID_PAYLOAD,
-          message: 'Product not found'
+          message: translate('Product not found')
         }
       });
       return;
@@ -48,13 +49,11 @@ module.exports = async (request, response, delegate, next) => {
     // If everything is fine, add the product to the cart
     const item = await cart.addItem(product.product_id, parseInt(qty, 10));
     await saveCart(cart);
-    // Set the new cart id to the context, so next middleware can use it
-    setContextValue(request, 'cartId', cart.getData('uuid'));
     response.status(OK);
     response.$body = {
       data: {
         item: item.export(),
-        count: cart.getItems().length,
+        count: cart.getData('total_qty'),
         cartId: cart.getData('uuid')
       }
     };

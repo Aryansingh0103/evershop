@@ -1,9 +1,7 @@
-const {
-  OPERATION_MAP
-} = require('@evershop/evershop/src/lib/util/filterOperationMapp');
-const { getValueSync } = require('@evershop/evershop/src/lib/util/registry');
+import { OPERATION_MAP } from '../../../lib/util/filterOperationMap.js';
+import { getValueSync } from '../../../lib/util/registry.js';
 
-module.exports = async function registerDefaultCategoryCollectionFilters() {
+export default async function registerDefaultCategoryCollectionFilters() {
   const { isAdmin } = this;
   // List of default supported filters
   const defaultFilters = [
@@ -36,22 +34,6 @@ module.exports = async function registerDefaultCategoryCollectionFilters() {
       }
     },
     {
-      key: 'include_in_nav',
-      operation: ['eq'],
-      callback: (query, operation, value, currentFilters) => {
-        query.andWhere(
-          'category.include_in_nav',
-          OPERATION_MAP[operation],
-          value
-        );
-        currentFilters.push({
-          key: 'include_in_nav',
-          operation,
-          value
-        });
-      }
-    },
-    {
       key: 'parent',
       operation: ['eq'],
       callback: (query, operation, value, currentFilters) => {
@@ -75,7 +57,6 @@ module.exports = async function registerDefaultCategoryCollectionFilters() {
           'categoryCollectionSortBy',
           {
             name: (query) => query.orderBy('category_description.name'),
-            include_in_nav: (query) => query.orderBy('category.include_in_nav'),
             status: (query) => query.orderBy('category.status')
           },
           {
@@ -98,4 +79,4 @@ module.exports = async function registerDefaultCategoryCollectionFilters() {
   ];
 
   return defaultFilters;
-};
+}

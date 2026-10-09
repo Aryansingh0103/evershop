@@ -1,22 +1,24 @@
-const { pool } = require('@evershop/evershop/src/lib/postgres/connection');
-const { getConfig } = require('@evershop/evershop/src/lib/util/getConfig');
-const {
-  setContextValue,
-  hasContextValue
-} = require('../../../graphql/services/contextHelper');
+import { pool } from '../../../../lib/postgres/connection.js';
+import { getBaseUrl } from '../../../../lib/util/getBaseUrl.js';
+import { getConfig } from '../../../../lib/util/getConfig.js';
+import { setPageMetaInfo } from '../../../cms/services/pageMetaInfo.js';
+import {
+  hasContextValue,
+  setContextValue
+} from '../../../graphql/services/contextHelper.js';
 
-module.exports = (request, response) => {
+export default (request, response) => {
   response.context = {}; // TODO: Fix this
   /** Some default context value */
   if (!hasContextValue(request, 'pool')) {
     setContextValue(request.app, 'pool', pool);
   }
   setContextValue(request, 'pool', pool);
-  const homeUrl = getConfig(
-    'shop.homeUrl',
-    `${request.protocol}://${request.get('host')}`
-  );
+  const homeUrl = getBaseUrl();
   setContextValue(request.app, 'homeUrl', homeUrl);
+  setPageMetaInfo(request, {
+    baseUrl: homeUrl
+  });
   setContextValue(request, 'currentUrl', `${homeUrl}${request.originalUrl}`);
   setContextValue(request, 'baseUrl', request.baseUrl);
   setContextValue(request, 'body', request.body);
@@ -38,4 +40,9 @@ module.exports = (request, response) => {
   setContextValue(request, 'subdomains', request.subdomains);
   setContextValue(request, 'xhr', request.xhr);
   setContextValue(request, 'sid', request.sessionID);
+  setContextValue(request, 'currentRoute', {
+    id: request.currentRoute.id,
+    path: request.currentRoute.path,
+    params: request.params
+  });
 };

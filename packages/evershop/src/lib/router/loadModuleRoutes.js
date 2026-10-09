@@ -1,13 +1,10 @@
-const path = require('path');
-const { existsSync } = require('fs');
-const { registerAdminRoute } = require('./registerAdminRoute');
-const { registerFrontStoreRoute } = require('./registerFrontStoreRoute');
-const { scanForRoutes } = require('./scanForRoutes');
+import { existsSync } from 'fs';
+import path from 'path';
+import { registerAdminRoute } from './registerAdminRoute.js';
+import { registerFrontStoreRoute } from './registerFrontStoreRoute.js';
+import { scanForRoutes } from './scanForRoutes.js';
 
-// eslint-disable-next-line no-multi-assign
-module.exports = exports = {};
-
-exports.loadModuleRoutes = function loadModuleRoutes(modulePath) {
+export const loadModuleRoutes = (modulePath) => {
   // Check for routes
   if (existsSync(path.resolve(modulePath, 'pages', 'admin'))) {
     const adminControllerRoutes = scanForRoutes(
@@ -20,6 +17,7 @@ exports.loadModuleRoutes = function loadModuleRoutes(modulePath) {
         route.id,
         route.method,
         route.path,
+        route.name,
         route.isApi,
         route.folder
       );
@@ -37,8 +35,12 @@ exports.loadModuleRoutes = function loadModuleRoutes(modulePath) {
         route.id,
         route.method,
         route.path,
+        route.name,
         route.isApi,
-        route.folder
+        route.folder,
+        null,
+        'private',
+        route.editable
       );
     });
   }
@@ -51,6 +53,7 @@ exports.loadModuleRoutes = function loadModuleRoutes(modulePath) {
         route.id,
         route.method,
         route.path,
+        route.name,
         route.isApi,
         route.folder,
         route.payloadSchema,

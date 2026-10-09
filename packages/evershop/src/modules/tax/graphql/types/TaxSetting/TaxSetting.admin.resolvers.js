@@ -1,5 +1,14 @@
-module.exports = {
+import {
+  getTaxPrecision,
+  getTaxRounding,
+  getTaxRoundLevel
+} from '../../../services/taxSettings.js';
+
+export default {
   Setting: {
+    taxRounding: () => getTaxRounding(),
+    taxPrecision: () => getTaxPrecision(),
+    taxRoundLevel: () => getTaxRoundLevel(),
     defaultProductTaxClassId: (setting) => {
       const defaultProductTaxClassId = setting.find(
         (s) => s.name === 'defaultProductTaxClassId'

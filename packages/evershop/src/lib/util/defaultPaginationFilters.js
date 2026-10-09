@@ -1,6 +1,7 @@
-const { CONSTANTS } = require('../helpers');
+import { getCollectionPageSize } from '../../modules/catalog/services/catalogSettings.js';
+import { CONSTANTS } from '../helpers.js';
 
-const defaultPaginationFilters = [
+export const defaultPaginationFilters = [
   {
     key: 'od',
     operation: ['eq'],
@@ -43,26 +44,27 @@ const defaultPaginationFilters = [
     key: 'limit',
     operation: ['eq'],
     callback: (query, operation, value, currentFilters) => {
-      if (parseInt(value, 10) > 0) {
-        // Get the current page from the current filters
+      const requested = parseInt(value, 10);
+      if (requested > 0) {
+        // `limit` arrives on a PUBLIC query string — /products, every category
+        // page, search. Uncapped, anyone can ask a storefront to render the
+        // whole catalog in one response, with the description/inventory/image
+        // joins and every per-item price and image resolver behind it. Clamp
+        // rather than reject: someone hand-editing the URL gets the largest
+        // page we serve, not an error.
+        const limit = Math.min(requested, CONSTANTS.MAX_COLLECTION_SIZE);
         const page = currentFilters.find((f) => f.key === 'page');
-        if (page) {
-          query.limit(
-            (parseInt(page.value, 10) - 1) * parseInt(value, 10),
-            parseInt(value, 10)
-          );
-        } else {
-          query.limit(0, parseInt(value, 10));
-          currentFilters.push({
-            key: 'limit',
-            operation: 'eq',
-            value
-          });
-        }
+        query.limit(
+          page ? (parseInt(page.value, 10) - 1) * limit : 0,
+          limit
+        );
+        // Report the CLAMPED value, and report it ONCE. The storefront computes
+        // its page count as ceil(total / limit), so echoing the requested value
+        // back would build links to pages that do not exist.
         currentFilters.push({
           key: 'limit',
           operation,
-          value
+          value: limit
         });
       } else {
         currentFilters.push({
@@ -76,29 +78,36 @@ const defaultPaginationFilters = [
   {
     key: '*',
     operation: ['eq'],
-    callback: (query, operation, value, currentFilters) => {
-      const page = currentFilters.find((f) => f.key === 'page') || { value: 1 };
-      const limit = currentFilters.find((f) => f.key === 'limit') || {
-        value: CONSTANTS.ADMIN_COLLECTION_SIZE
-      };
+    callback: function (query, operation, value, currentFilters) {
+      const page = currentFilters.find((f) => f.key === 'page');
+      const limit = currentFilters.find((f) => f.key === 'limit');
+      const defaultPage = 1;
+      const defaultLimit = this.isAdmin
+        ? CONSTANTS.ADMIN_COLLECTION_SIZE
+        : getCollectionPageSize();
       currentFilters.push({
         key: 'page',
         operation: 'eq',
-        value: page.value
+        value: defaultPage
       });
-      currentFilters.push({
-        key: 'limit',
-        operation: 'eq',
-        value: limit.value
-      });
+      if (!limit) {
+        currentFilters.push({
+          key: 'limit',
+          operation: 'eq',
+          value: defaultLimit
+        });
+      }
+      // Clamp here too. This is the only entry whose `query.limit()` survives
+      // (it runs last, and `limit()` replaces), so it is the real ceiling —
+      // and it also guards a store that configures an absurd page size.
+      const effectiveLimit = Math.min(
+        parseInt(limit?.value || defaultLimit, 10),
+        CONSTANTS.MAX_COLLECTION_SIZE
+      );
       query.limit(
-        (parseInt(page.value, 10) - 1) * parseInt(limit.value, 10),
-        parseInt(limit.value, 10)
+        (parseInt(page?.value || defaultPage, 10) - 1) * effectiveLimit,
+        effectiveLimit
       );
     }
   }
 ];
-
-module.exports = {
-  defaultPaginationFilters
-};

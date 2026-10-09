@@ -1,20 +1,18 @@
-const { pool } = require('@evershop/evershop/src/lib/postgres/connection');
-const { getConfig } = require('@evershop/evershop/src/lib/util/getConfig');
-const {
-  setContextValue,
-  hasContextValue
-} = require('../../../graphql/services/contextHelper');
+import { pool } from '../../../../lib/postgres/connection.js';
+import { getBaseUrl } from '../../../../lib/util/getBaseUrl.js';
+import { getConfig } from '../../../../lib/util/getConfig.js';
+import {
+  hasContextValue,
+  setContextValue
+} from '../../../graphql/services/contextHelper.js';
 
-module.exports = (request, response) => {
+export default (request, response) => {
   response.context = {};
   /** Some default context value */
   if (!hasContextValue(request, 'pool')) {
     setContextValue(request.app, 'pool', pool);
   }
-  const homeUrl = getConfig(
-    'shop.homeUrl',
-    `${request.protocol}://${request.get('host')}`
-  );
+  const homeUrl = getBaseUrl();
   setContextValue(request.app, 'homeUrl', homeUrl);
   setContextValue(request, 'currentUrl', `${homeUrl}${request.originalUrl}`);
   setContextValue(request, 'baseUrl', request.baseUrl);

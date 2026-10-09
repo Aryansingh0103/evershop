@@ -1,13 +1,13 @@
-/* eslint-disable camelcase */
-const {
+import { translate } from '../../../../lib/locale/translate/translate.js';
+import {
+  INTERNAL_SERVER_ERROR,
   INVALID_PAYLOAD,
-  OK,
-  INTERNAL_SERVER_ERROR
-} = require('@evershop/evershop/src/lib/util/httpStatus');
-const { getCartByUUID } = require('../../services/getCartByUUID');
-const { saveCart } = require('../../services/saveCart');
+  OK
+} from '../../../../lib/util/httpStatus.js';
+import { getCartByUUID } from '../../services/getCartByUUID.js';
+import { saveCart } from '../../services/saveCart.js';
 
-module.exports = async (request, response, delegate, next) => {
+export default async (request, response, next) => {
   try {
     const { cart_id } = request.params;
     const { email } = request.body;
@@ -16,7 +16,7 @@ module.exports = async (request, response, delegate, next) => {
     if (!cart) {
       response.status(INVALID_PAYLOAD).json({
         error: {
-          message: 'Invalid cart',
+          message: translate('Invalid cart'),
           status: INVALID_PAYLOAD
         }
       });

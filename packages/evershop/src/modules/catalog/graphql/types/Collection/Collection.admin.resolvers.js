@@ -1,7 +1,7 @@
-const { select } = require('@evershop/postgres-query-builder');
-const { buildUrl } = require('@evershop/evershop/src/lib/router/buildUrl');
+import { select } from '@evershop/postgres-query-builder';
+import { buildUrl } from '../../../../../lib/router/buildUrl.js';
 
-module.exports = {
+export default {
   Collection: {
     editUrl: (collection) =>
       buildUrl('collectionEdit', { id: collection.uuid }),
@@ -10,7 +10,8 @@ module.exports = {
     updateApi: (collection) =>
       buildUrl('updateCollection', { id: collection.uuid }),
     deleteApi: (collection) =>
-      buildUrl('deleteCollection', { id: collection.uuid })
+      buildUrl('deleteCollection', { id: collection.uuid }),
+    metaData: (collection) => collection.metaData ?? {}
   },
   Product: {
     removeFromCollectionUrl: async (product, _, { pool }) => {

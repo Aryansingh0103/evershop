@@ -1,22 +1,15 @@
-const { execute } = require('graphql');
-const { validate } = require('graphql/validation');
-const { parse } = require('graphql');
-const { OK } = require('@evershop/evershop/src/lib/util/httpStatus');
-const { getContext } = require('./contextHelper');
+import { execute, parse, validateSchema } from 'graphql';
+import { createDefinitionCache } from '../../../lib/metafield/definitionCache.js';
+import { pool } from '../../../lib/postgres/connection.js';
+import { OK } from '../../../lib/util/httpStatus.js';
+import { createLinkLoaders } from '../../../lib/widget/linkResolver.js';
+import { getContext } from './contextHelper.js';
 
-module.exports.graphqlMiddleware = (schema) =>
-  async function graphqlMiddleware(request, response, delegate, next) {
+export const graphqlMiddleware = (schema) =>
+  async function graphqlMiddleware(request, response, next) {
     const { body } = request;
     const { query, variables } = body;
     try {
-      const promises = [];
-      Object.keys(delegate).forEach((id) => {
-        // Check if middleware is async
-        if (delegate[id] instanceof Promise) {
-          promises.push(delegate[id]);
-        }
-      });
-
       if (!query) {
         response.status(OK).json({
           data: {}
@@ -26,13 +19,24 @@ module.exports.graphqlMiddleware = (schema) =>
 
       const document = parse(query);
       // Validate the query
-      const validationErrors = validate(schema, document);
+      const validationErrors = validateSchema(schema, document);
       if (validationErrors.length > 0) {
         next(new Error(validationErrors[0].message));
       } else {
+        // Build the context value once per request. linkLoaders are
+        // request-scoped: their per-request cache must NOT leak across
+        // requests, so we create fresh loaders here.
+        const contextValue = {
+          ...getContext(request),
+          linkLoaders: createLinkLoaders(pool),
+          // Request-scoped metafield definition memo (see the SSR twin in
+          // pages/global/[buildQuery]graphql[response].js) — must exist on
+          // BOTH context build sites or client-side grid queries lose it.
+          metafieldDefinitionCache: createDefinitionCache()
+        };
         const data = await execute({
           schema,
-          contextValue: getContext(request),
+          contextValue,
           document,
           variableValues: variables
         });

@@ -1,20 +1,41 @@
-/* eslint-disable no-nested-ternary */
+import { GridPagination } from '@components/admin/grid/GridPagination';
+import { SortableHeader } from '@components/admin/grid/header/Sortable';
+import { Status } from '@components/admin/Status.js';
+import Area from '@components/common/Area';
+import { Form } from '@components/common/form/Form.js';
+import { InputField } from '@components/common/form/InputField.js';
+import { useAlertContext } from '@components/common/modal/Alert';
+import { Button } from '@components/common/ui/Button.js';
+import { ButtonGroup } from '@components/common/ui/ButtonGroup.js';
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardHeader,
+  CardTitle
+} from '@components/common/ui/Card.js';
+import { Checkbox } from '@components/common/ui/Checkbox.js';
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue
+} from '@components/common/ui/Select.js';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHeader,
+  TableRow
+} from '@components/common/ui/Table.js';
+import { _ } from '@evershop/evershop/lib/locale/translate/_';
+import axios from 'axios';
 import PropTypes from 'prop-types';
 import React, { useState } from 'react';
-import axios from 'axios';
-import Area from '@components/common/Area';
-import Pagination from '@components/common/grid/Pagination';
-import { Checkbox } from '@components/common/form/fields/Checkbox';
-import { useAlertContext } from '@components/common/modal/Alert';
-import StatusRow from '@components/common/grid/rows/StatusRow';
-import BasicRow from '@components/common/grid/rows/BasicRow';
-import { Card } from '@components/admin/cms/Card';
-import CustomerNameRow from '@components/admin/customer/customerGrid/rows/CustomerName';
-import CreateAt from '@components/admin/customer/customerGrid/rows/CreateAt';
-import { Form } from '@components/common/form/Form';
-import { Field } from '@components/common/form/Field';
-import SortableHeader from '@components/common/grid/headers/Sortable';
-import Filter from '@components/common/list/Filter';
+import { CustomerName } from './rows/CustomerName.js';
 
 function Actions({ customers = [], selectedIds = [] }) {
   const { openAlert, closeAlert } = useAlertContext();
@@ -34,45 +55,47 @@ function Actions({ customers = [], selectedIds = [] }) {
 
   const actions = [
     {
-      name: 'Disable',
+      name: _('Disable'),
       onAction: () => {
         openAlert({
-          heading: `Disable ${selectedIds.length} customers`,
-          content: 'Are you sure?',
+          heading: _('Disable ${count} customers', {
+            count: selectedIds.length
+          }),
+          content: _('Are you sure?'),
           primaryAction: {
-            title: 'Cancel',
+            title: _('Cancel'),
             onAction: closeAlert,
-            variant: 'primary'
+            variant: 'secondary'
           },
           secondaryAction: {
-            title: 'Disable',
+            title: _('Disable'),
             onAction: async () => {
               await updateCustomers(0);
             },
-            variant: 'critical',
-            isLoading: false
+            variant: 'destructive'
           }
         });
       }
     },
     {
-      name: 'Enable',
+      name: _('Enable'),
       onAction: () => {
         openAlert({
-          heading: `Enable ${selectedIds.length} customers`,
-          content: 'Are you sure?',
+          heading: _('Enable ${count} customers', {
+            count: selectedIds.length
+          }),
+          content: _('Are you sure?'),
           primaryAction: {
-            title: 'Cancel',
+            title: _('Cancel'),
             onAction: closeAlert,
-            variant: 'primary'
+            variant: 'secondary'
           },
           secondaryAction: {
-            title: 'Enable',
+            title: _('Enable'),
             onAction: async () => {
               await updateCustomers(1);
             },
-            variant: 'critical',
-            isLoading: false
+            variant: 'destructive'
           }
         });
       }
@@ -80,30 +103,27 @@ function Actions({ customers = [], selectedIds = [] }) {
   ];
 
   return (
-    <tr>
+    <TableRow>
       {selectedIds.length === 0 && null}
       {selectedIds.length > 0 && (
-        <td style={{ borderTop: 0 }} colSpan="100">
-          <div className="inline-flex border border-divider rounded justify-items-start">
-            <a href="#" className="font-semibold pt-075 pb-075 pl-15 pr-15">
-              {selectedIds.length} selected
-            </a>
-            {actions.map((action) => (
-              <a
-                href="#"
+        <TableCell colSpan="100">
+          <ButtonGroup>
+            {actions.map((action, i) => (
+              <Button
+                key={i}
+                variant={'outline'}
                 onClick={(e) => {
                   e.preventDefault();
                   action.onAction();
                 }}
-                className="font-semibold pt-075 pb-075 pl-15 pr-15 block border-l border-divider self-center"
               >
-                <span>{action.name}</span>
-              </a>
+                {action.name}
+              </Button>
             ))}
-          </div>
-        </td>
+          </ButtonGroup>
+        </TableCell>
       )}
-    </tr>
+    </TableRow>
   );
 }
 
@@ -121,261 +141,244 @@ export default function CustomerGrid({
   customers: { items: customers, total, currentFilters = [] }
 }) {
   const page = currentFilters.find((filter) => filter.key === 'page')
-    ? currentFilters.find((filter) => filter.key === 'page').value
+    ? parseInt(currentFilters.find((filter) => filter.key === 'page').value, 10)
     : 1;
   const limit = currentFilters.find((filter) => filter.key === 'limit')
-    ? currentFilters.find((filter) => filter.key === 'limit').value
+    ? parseInt(
+        currentFilters.find((filter) => filter.key === 'limit').value,
+        10
+      )
     : 20;
   const [selectedRows, setSelectedRows] = useState([]);
 
   return (
     <Card>
-      <Card.Session
-        title={
-          <Form submitBtn={false}>
-            <div className="flex gap-2 justify-center items-center">
-              <Area
-                id="customerGridFilter"
-                noOuter
-                coreComponents={[
-                  {
-                    component: {
-                      default: () => (
-                        <Field
-                          type="text"
-                          id="keyword"
-                          placeholder="Search"
-                          value={
-                            currentFilters.find((f) => f.key === 'keyword')
-                              ?.value
-                          }
-                          onKeyPress={(e) => {
-                            // If the user press enter, we should submit the form
-                            if (e.key === 'Enter') {
-                              const url = new URL(document.location);
-                              const keyword =
-                                document.getElementById('keyword')?.value;
-                              if (keyword) {
-                                url.searchParams.set('keyword', keyword);
-                              } else {
-                                url.searchParams.delete('keyword');
-                              }
-                              window.location.href = url;
-                            }
-                          }}
-                        />
-                      )
-                    },
-                    sortOrder: 5
-                  },
-                  {
-                    component: {
-                      default: () => (
-                        <Filter
-                          options={[
-                            {
-                              label: 'Enabled',
-                              value: '1',
-                              onSelect: () => {
-                                const url = new URL(document.location);
-                                url.searchParams.set('status', 1);
-                                window.location.href = url;
-                              }
-                            },
-                            {
-                              label: 'Disabled',
-                              value: '0',
-                              onSelect: () => {
-                                const url = new URL(document.location);
-                                url.searchParams.set('status', 0);
-                                window.location.href = url;
-                              }
-                            }
-                          ]}
-                          selectedOption={
-                            currentFilters.find((f) => f.key === 'status')
-                              ? currentFilters.find((f) => f.key === 'status')
-                                  .value === '1'
-                                ? 'Enabled'
-                                : 'Disabled'
-                              : undefined
-                          }
-                          title="Status"
-                        />
-                      )
-                    },
-                    sortOrder: 10
-                  }
-                ]}
-                currentFilters={currentFilters}
-              />
-            </div>
-          </Form>
-        }
-        actions={[
-          {
-            variant: 'interactive',
-            name: 'Clear filter',
-            onAction: () => {
-              // Just get the url and remove all query params
-              const url = new URL(document.location);
-              url.search = '';
-              window.location.href = url.href;
-            }
-          }
-        ]}
-      />
-      <table className="listing sticky">
-        <thead>
-          <tr>
-            <th className="align-bottom">
-              <Checkbox
-                onChange={(e) => {
-                  if (e.target.checked)
-                    setSelectedRows(customers.map((c) => c.uuid));
-                  else setSelectedRows([]);
-                }}
-              />
-            </th>
+      <CardHeader className="flex justify-between">
+        <Form submitBtn={false} id="customerGridFilter">
+          <div className="flex gap-5 justify-center items-center">
             <Area
-              id="customerGridHeader"
+              id="customerGridFilter"
               noOuter
               coreComponents={[
                 {
-                  // eslint-disable-next-line react/no-unstable-nested-components
                   component: {
                     default: () => (
-                      <SortableHeader
-                        title="Full Name"
-                        name="full_name"
-                        currentFilters={currentFilters}
+                      <InputField
+                        name="keyword"
+                        placeholder={_('Search')}
+                        defaultValue={
+                          currentFilters.find((f) => f.key === 'keyword')?.value
+                        }
+                        onKeyPress={(e) => {
+                          // If the user press enter, we should submit the form
+                          if (e.key === 'Enter') {
+                            const url = new URL(document.location);
+                            const keyword = e.target?.value;
+                            if (keyword) {
+                              url.searchParams.set('keyword', keyword);
+                            } else {
+                              url.searchParams.delete('keyword');
+                            }
+                            window.location.href = url;
+                          }
+                        }}
                       />
+                    )
+                  },
+                  sortOrder: 5
+                },
+                {
+                  component: {
+                    default: () => (
+                      <Select
+                        value={
+                          currentFilters.find((f) => f.key === 'status')?.value
+                        }
+                        onValueChange={(value) => {
+                          const url = new URL(document.location);
+                          url.searchParams.set('status', value);
+                          window.location.href = url.href;
+                        }}
+                      >
+                        <SelectTrigger>
+                          <SelectValue>{_('Status')}</SelectValue>
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectGroup>
+                            <SelectLabel>{_('Status')}</SelectLabel>
+                            <SelectItem value="1">{_('Enabled')}</SelectItem>
+                            <SelectItem value="0">{_('Disabled')}</SelectItem>
+                          </SelectGroup>
+                        </SelectContent>
+                      </Select>
                     )
                   },
                   sortOrder: 10
-                },
-                {
-                  // eslint-disable-next-line react/no-unstable-nested-components
-                  component: {
-                    default: () => (
-                      <SortableHeader
-                        title="Email"
-                        email="email"
-                        currentFilters={currentFilters}
-                      />
-                    )
-                  },
-                  sortOrder: 15
-                },
-                {
-                  // eslint-disable-next-line react/no-unstable-nested-components
-                  component: {
-                    default: () => (
-                      <SortableHeader
-                        title="Status"
-                        name="status"
-                        currentFilters={currentFilters}
-                      />
-                    )
-                  },
-                  sortOrder: 20
-                },
-                {
-                  // eslint-disable-next-line react/no-unstable-nested-components
-                  component: {
-                    default: () => (
-                      <SortableHeader
-                        title="Created At"
-                        name="created_at"
-                        currentFilters={currentFilters}
-                      />
-                    )
-                  },
-                  sortOrder: 25
                 }
               ]}
+              currentFilters={currentFilters}
             />
-          </tr>
-        </thead>
-        <tbody>
-          <Actions
-            customers={customers}
-            selectedIds={selectedRows}
-            setSelectedRows={setSelectedRows}
-          />
-          {customers.map((c) => (
-            <tr key={c.customerId}>
-              <td>
-                <Checkbox
-                  isChecked={selectedRows.includes(c.uuid)}
-                  onChange={(e) => {
-                    if (e.target.checked) {
-                      setSelectedRows(selectedRows.concat([c.uuid]));
-                    } else {
-                      setSelectedRows(
-                        selectedRows.filter((row) => row !== c.uuid)
-                      );
-                    }
-                  }}
-                />
-              </td>
+          </div>
+        </Form>
+        <CardAction>
+          <Button
+            variant="link"
+            className={'hover:cursor-pointer'}
+            onClick={() => {
+              const url = new URL(document.location);
+              url.search = '';
+              window.location.href = url.href;
+            }}
+          >
+            {_('Clear filter')}
+          </Button>
+        </CardAction>
+      </CardHeader>
+      <CardContent>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableCell className="align-bottom">
+                <div className="form-field mb-0">
+                  <Checkbox
+                    onCheckedChange={(checked) => {
+                      if (checked)
+                        setSelectedRows(customers.map((c) => c.uuid));
+                      else setSelectedRows([]);
+                    }}
+                  />
+                </div>
+              </TableCell>
               <Area
-                id="customerGridRow"
-                row={c}
+                id="customerGridHeader"
                 noOuter
-                selectedRows={selectedRows}
-                setSelectedRows={setSelectedRows}
                 coreComponents={[
                   {
-                    // eslint-disable-next-line react/no-unstable-nested-components
                     component: {
                       default: () => (
-                        <CustomerNameRow
-                          id="name"
-                          name={c.fullName}
-                          url={c.editUrl}
+                        <SortableHeader
+                          title={_('Full Name')}
+                          name="full_name"
+                          currentFilters={currentFilters}
                         />
                       )
                     },
                     sortOrder: 10
                   },
                   {
-                    // eslint-disable-next-line react/no-unstable-nested-components
                     component: {
-                      default: ({ areaProps }) => (
-                        <BasicRow id="email" areaProps={areaProps} />
+                      default: () => (
+                        <SortableHeader
+                          title={_('Email')}
+                          name="email"
+                          currentFilters={currentFilters}
+                        />
                       )
                     },
                     sortOrder: 15
                   },
                   {
-                    // eslint-disable-next-line react/no-unstable-nested-components
                     component: {
-                      default: ({ areaProps }) => (
-                        <StatusRow id="status" areaProps={areaProps} />
+                      default: () => (
+                        <SortableHeader
+                          title={_('Status')}
+                          name="status"
+                          currentFilters={currentFilters}
+                        />
                       )
                     },
                     sortOrder: 20
                   },
                   {
-                    // eslint-disable-next-line react/no-unstable-nested-components
                     component: {
-                      default: () => <CreateAt time={c.createdAt.text} />
+                      default: () => (
+                        <SortableHeader
+                          title={_('Created At')}
+                          name="created_at"
+                          currentFilters={currentFilters}
+                        />
+                      )
                     },
                     sortOrder: 25
                   }
                 ]}
               />
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      {customers.length === 0 && (
-        <div className="flex w-full justify-center">
-          There is no customer to display
-        </div>
-      )}
-      <Pagination total={total} limit={limit} page={page} />
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            <Actions
+              customers={customers}
+              selectedIds={selectedRows}
+              setSelectedRows={setSelectedRows}
+            />
+            {customers.map((c) => (
+              <TableRow key={c.customerId}>
+                <TableCell>
+                  <div className="form-field mb-0">
+                    <Checkbox
+                      checked={selectedRows.includes(c.uuid)}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          setSelectedRows(selectedRows.concat([c.uuid]));
+                        } else {
+                          setSelectedRows(
+                            selectedRows.filter((row) => row !== c.uuid)
+                          );
+                        }
+                      }}
+                    />
+                  </div>
+                </TableCell>
+                <Area
+                  id="customerGridRow"
+                  row={c}
+                  noOuter
+                  selectedRows={selectedRows}
+                  setSelectedRows={setSelectedRows}
+                  coreComponents={[
+                    {
+                      component: {
+                        default: () => (
+                          <CustomerName name={c.fullName} url={c.editUrl} />
+                        )
+                      },
+                      sortOrder: 10
+                    },
+                    {
+                      component: {
+                        default: ({ areaProps }) => (
+                          <TableCell>{c.email}</TableCell>
+                        )
+                      },
+                      sortOrder: 15
+                    },
+                    {
+                      component: {
+                        default: ({ areaProps }) => (
+                          <Status status={parseInt(c.status, 10)} />
+                        )
+                      },
+                      sortOrder: 20
+                    },
+                    {
+                      component: {
+                        default: () => <TableCell>{c.createdAt.text}</TableCell>
+                      },
+                      sortOrder: 25
+                    }
+                  ]}
+                />
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+        {customers.length === 0 && (
+          <div className="flex w-full justify-center mt-3">
+            {_('There is no customer to display')}
+          </div>
+        )}
+        <GridPagination total={total} limit={limit} page={page} />
+      </CardContent>
     </Card>
   );
 }

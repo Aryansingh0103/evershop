@@ -1,20 +1,32 @@
-/* eslint-disable react/no-array-index-key */
-/* eslint-disable jsx-a11y/anchor-is-valid */
-/* eslint-disable react/no-unstable-nested-components */
+import { GridPagination } from '@components/admin/grid/GridPagination';
+import { DummyColumnHeader } from '@components/admin/grid/header/Dummy';
+import { SortableHeader } from '@components/admin/grid/header/Sortable';
+import Area from '@components/common/Area';
+import { Form } from '@components/common/form/Form.js';
+import { InputField } from '@components/common/form/InputField.js';
+import { useAlertContext } from '@components/common/modal/Alert';
+import { Button } from '@components/common/ui/Button.js';
+import { ButtonGroup } from '@components/common/ui/ButtonGroup.js';
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardHeader
+} from '@components/common/ui/Card.js';
+import { Checkbox } from '@components/common/ui/Checkbox.js';
+import {
+  Table,
+  TableCell,
+  TableRow,
+  TableHeader,
+  TableHead,
+  TableBody
+} from '@components/common/ui/Table.js';
+import { _ } from '@evershop/evershop/lib/locale/translate/_';
+import axios from 'axios';
 import PropTypes from 'prop-types';
 import React, { useState } from 'react';
-import axios from 'axios';
-import Area from '@components/common/Area';
-import Pagination from '@components/common/grid/Pagination';
-import { useAlertContext } from '@components/common/modal/Alert';
-import { Checkbox } from '@components/common/form/fields/Checkbox';
-import { Card } from '@components/admin/cms/Card';
-import CollectionNameRow from '@components/admin/catalog/collectionGrid/rows/CollectionNameRow';
-import TextRow from '@components/common/grid/rows/TextRow';
-import DummyColumnHeader from '@components/common/grid/headers/Dummy';
-import SortableHeader from '@components/common/grid/headers/Sortable';
-import { Form } from '@components/common/form/Form';
-import { Field } from '@components/common/form/Field';
+import { CollectionNameRow } from './rows/CollectionNameRow.js';
 
 function Actions({ collections = [], selectedIds = [] }) {
   const { openAlert, closeAlert } = useAlertContext();
@@ -33,23 +45,24 @@ function Actions({ collections = [], selectedIds = [] }) {
 
   const actions = [
     {
-      name: 'Delete',
+      name: _('Delete'),
       onAction: () => {
         openAlert({
-          heading: `Delete ${selectedIds.length} collections`,
-          content: <div>Can&apos;t be undone</div>,
+          heading: _('Delete ${count} collections', {
+            count: selectedIds.length
+          }),
+          content: <div>{_("Can't be undone")}</div>,
           primaryAction: {
-            title: 'Cancel',
+            title: _('Cancel'),
             onAction: closeAlert,
-            variant: 'primary'
+            variant: 'secondary'
           },
           secondaryAction: {
-            title: 'Delete',
+            title: _('Delete'),
             onAction: async () => {
               await deleteCategories();
             },
-            variant: 'critical',
-            isLoading
+            variant: 'destructive'
           }
         });
       }
@@ -57,31 +70,27 @@ function Actions({ collections = [], selectedIds = [] }) {
   ];
 
   return (
-    <tr>
+    <TableRow>
       {selectedIds.length === 0 && null}
       {selectedIds.length > 0 && (
-        <td style={{ borderTop: 0 }} colSpan="100">
-          <div className="inline-flex border border-divider rounded justify-items-start">
-            <a href="#" className="font-semibold pt-075 pb-075 pl-15 pr-15">
-              {selectedIds.length} selected
-            </a>
-            {actions.map((action, index) => (
-              <a
-                key={index}
-                href="#"
+        <TableCell colSpan="100">
+          <ButtonGroup>
+            {actions.map((action, i) => (
+              <Button
+                key={i}
+                variant={'outline'}
                 onClick={(e) => {
                   e.preventDefault();
                   action.onAction();
                 }}
-                className="font-semibold pt-075 pb-075 pl-15 pr-15 block border-l border-divider self-center"
               >
-                <span>{action.name}</span>
-              </a>
+                {action.name}
+              </Button>
             ))}
-          </div>
-        </td>
+          </ButtonGroup>
+        </TableCell>
       )}
-    </tr>
+    </TableRow>
   );
 }
 
@@ -98,154 +107,97 @@ export default function CollectionGrid({
   collections: { items: collections, total, currentFilters = [] }
 }) {
   const page = currentFilters.find((filter) => filter.key === 'page')
-    ? currentFilters.find((filter) => filter.key === 'page').value
+    ? parseInt(currentFilters.find((filter) => filter.key === 'page').value, 10)
     : 1;
   const limit = currentFilters.find((filter) => filter.key === 'limit')
-    ? currentFilters.find((filter) => filter.key === 'limit').value
+    ? parseInt(
+        currentFilters.find((filter) => filter.key === 'limit').value,
+        10
+      )
     : 20;
   const [selectedRows, setSelectedRows] = useState([]);
 
   return (
     <div className="w-2/3" style={{ margin: '0 auto' }}>
       <Card>
-        <Card.Session
-          title={
-            <Form submitBtn={false}>
-              <Field
-                type="text"
-                id="name"
-                placeholder="Search"
-                value={currentFilters.find((f) => f.key === 'name')?.value}
-                onKeyPress={(e) => {
-                  // If the user press enter, we should submit the form
-                  if (e.key === 'Enter') {
-                    const url = new URL(document.location);
-                    const name = document.getElementById('name')?.value;
-                    if (name) {
-                      url.searchParams.set('name[operation]', 'like');
-                      url.searchParams.set('name[value]', name);
-                    } else {
-                      url.searchParams.delete('name[operation]');
-                      url.searchParams.delete('name[value]');
-                    }
-                    window.location.href = url;
+        <CardHeader className="flex justify-between">
+          <Form submitBtn={false} id="collectionGridFilter">
+            <InputField
+              name="name"
+              placeholder={_('Search')}
+              defaultValue={currentFilters.find((f) => f.key === 'name')?.value}
+              onKeyPress={(e) => {
+                // If the user press enter, we should submit the form
+                if (e.key === 'Enter') {
+                  const url = new URL(document.location);
+                  const name = e.target?.value;
+                  if (name) {
+                    url.searchParams.set('name[operation]', 'like');
+                    url.searchParams.set('name[value]', name);
+                  } else {
+                    url.searchParams.delete('name[operation]');
+                    url.searchParams.delete('name[value]');
                   }
-                }}
-              />
-            </Form>
-          }
-          actions={[
-            {
-              variant: 'interactive',
-              name: 'Clear filter',
-              onAction: () => {
+                  window.location.href = url;
+                }
+              }}
+            />
+          </Form>
+          <CardAction>
+            <Button
+              variant="link"
+              onClick={() => {
                 // Just get the url and remove all query params
                 const url = new URL(document.location);
                 url.search = '';
                 window.location.href = url.href;
-              }
-            }
-          ]}
-         />
-        <table className="listing sticky">
-          <thead>
-            <tr>
-              <th className="align-bottom">
-                <Checkbox
-                  onChange={(e) => {
-                    if (e.target.checked) {
-                      setSelectedRows(collections.map((c) => c.uuid));
-                    } else {
-                      setSelectedRows([]);
-                    }
-                  }}
-                />
-              </th>
-              <Area
-                className=""
-                id="collectionGridHeader"
-                noOuter
-                coreComponents={[
-                  {
-                    component: {
-                      default: () => (
-                        <DummyColumnHeader
-                          title="ID"
-                          id="collectionId"
-                          currentFilters={currentFilters}
-                        />
-                      )
-                    },
-                    sortOrder: 5
-                  },
-                  {
-                    component: {
-                      default: () => (
-                        <SortableHeader
-                          title="Collection Name"
-                          name="name"
-                          currentFilters={currentFilters}
-                        />
-                      )
-                    },
-                    sortOrder: 10
-                  },
-                  {
-                    component: {
-                      default: () => (
-                        <SortableHeader
-                          title="Code"
-                          name="code"
-                          currentFilters={currentFilters}
-                        />
-                      )
-                    },
-                    sortOrder: 15
-                  }
-                ]}
-              />
-            </tr>
-          </thead>
-          <tbody>
-            <Actions
-              collections={collections}
-              selectedIds={selectedRows}
-              setSelectedRows={setSelectedRows}
-            />
-            {collections.map((c) => (
-              <tr key={c.collectionId}>
-                <td style={{ width: '2rem' }}>
-                  <Checkbox
-                    isChecked={selectedRows.includes(c.uuid)}
-                    onChange={(e) => {
-                      if (e.target.checked)
-                        setSelectedRows(selectedRows.concat([c.uuid]));
-                      else
-                        setSelectedRows(
-                          selectedRows.filter((r) => r !== c.uuid)
-                        );
-                    }}
-                  />
-                </td>
+              }}
+            >
+              {_('Clear filters')}
+            </Button>
+          </CardAction>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>
+                  <div className="form-field mb-0">
+                    <Checkbox
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          setSelectedRows(collections.map((c) => c.uuid));
+                        } else {
+                          setSelectedRows([]);
+                        }
+                      }}
+                    />
+                  </div>
+                </TableHead>
                 <Area
                   className=""
-                  id="collectionGridRow"
-                  row={c}
+                  id="collectionGridHeader"
                   noOuter
                   coreComponents={[
                     {
                       component: {
-                        default: () => <TextRow text={c.collectionId} />
+                        default: () => (
+                          <DummyColumnHeader
+                            title={_('ID')}
+                            id="collectionId"
+                            currentFilters={currentFilters}
+                          />
+                        )
                       },
                       sortOrder: 5
                     },
                     {
                       component: {
                         default: () => (
-                          <CollectionNameRow
-                            id="name"
-                            name={c.name}
-                            url={c.editUrl}
+                          <SortableHeader
+                            title={_('Collection Name')}
+                            name="name"
+                            currentFilters={currentFilters}
                           />
                         )
                       },
@@ -253,22 +205,88 @@ export default function CollectionGrid({
                     },
                     {
                       component: {
-                        default: () => <TextRow text={c.code} />
+                        default: () => (
+                          <SortableHeader
+                            title={_('Code')}
+                            name="code"
+                            currentFilters={currentFilters}
+                          />
+                        )
                       },
                       sortOrder: 15
                     }
                   ]}
                 />
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        {collections.length === 0 && (
-          <div className="flex w-full justify-center">
-            There is no collections to display
-          </div>
-        )}
-        <Pagination total={total} limit={limit} page={page} />
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              <Actions
+                collections={collections}
+                selectedIds={selectedRows}
+                setSelectedRows={setSelectedRows}
+              />
+              {collections.map((c) => (
+                <TableRow key={c.collectionId}>
+                  <TableCell style={{ width: '2rem' }}>
+                    <div className="form-field mb-0">
+                      <Checkbox
+                        checked={selectedRows.includes(c.uuid)}
+                        onCheckedChange={(checked) => {
+                          if (checked)
+                            setSelectedRows(selectedRows.concat([c.uuid]));
+                          else
+                            setSelectedRows(
+                              selectedRows.filter((r) => r !== c.uuid)
+                            );
+                        }}
+                      />
+                    </div>
+                  </TableCell>
+                  <Area
+                    className=""
+                    id="collectionGridRow"
+                    row={c}
+                    noOuter
+                    coreComponents={[
+                      {
+                        component: {
+                          default: () => (
+                            <TableCell>{c.collectionId.toString()}</TableCell>
+                          )
+                        },
+                        sortOrder: 5
+                      },
+                      {
+                        component: {
+                          default: () => (
+                            <CollectionNameRow
+                              id="name"
+                              name={c.name}
+                              url={c.editUrl}
+                            />
+                          )
+                        },
+                        sortOrder: 10
+                      },
+                      {
+                        component: {
+                          default: () => <TableCell>{c.code}</TableCell>
+                        },
+                        sortOrder: 15
+                      }
+                    ]}
+                  />
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+          {collections.length === 0 && (
+            <div className="flex w-full justify-center mt-2">
+              {_('There is no collections to display')}
+            </div>
+          )}
+          <GridPagination total={total} limit={limit} page={page} />
+        </CardContent>
       </Card>
     </div>
   );

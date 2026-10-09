@@ -1,18 +1,33 @@
+import { NavigationItemGroup } from '@components/admin/NavigationItemGroup';
+import { _ } from '@evershop/evershop/lib/locale/translate/_';
+import { Book, Inbox, Puzzle } from 'lucide-react';
 import PropTypes from 'prop-types';
 import React from 'react';
-import Icon from '@heroicons/react/solid/esm/DocumentIcon';
-import NavigationItemGroup from '@components/admin/cms/NavigationItemGroup';
 
-export default function CmsMenuGroup({ cmsPageGrid }) {
+export default function CmsMenuGroup({
+  cmsPageGrid,
+  widgetGrid,
+  contactSubmissionGrid
+}) {
   return (
     <NavigationItemGroup
       id="cmsMenuGroup"
-      name="CMS"
+      name={_('CMS')}
       items={[
         {
-          Icon,
+          Icon: Book,
           url: cmsPageGrid,
-          title: 'Pages'
+          title: _('Pages')
+        },
+        {
+          Icon: Puzzle,
+          url: widgetGrid,
+          title: _('Widgets')
+        },
+        {
+          Icon: Inbox,
+          url: contactSubmissionGrid,
+          title: _('Contact messages')
         }
       ]}
     />
@@ -20,7 +35,9 @@ export default function CmsMenuGroup({ cmsPageGrid }) {
 }
 
 CmsMenuGroup.propTypes = {
-  cmsPageGrid: PropTypes.string.isRequired
+  cmsPageGrid: PropTypes.string.isRequired,
+  widgetGrid: PropTypes.string.isRequired,
+  contactSubmissionGrid: PropTypes.string.isRequired
 };
 
 export const layout = {
@@ -31,5 +48,7 @@ export const layout = {
 export const query = `
   query Query {
     cmsPageGrid: url(routeId:"cmsPageGrid")
+    widgetGrid: url(routeId:"widgetGrid")
+    contactSubmissionGrid: url(routeId:"contactSubmissionGrid")
   }
 `;

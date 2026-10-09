@@ -1,10 +1,8 @@
+import { NavigationItemGroup } from '@components/admin/NavigationItemGroup';
+import { _ } from '@evershop/evershop/lib/locale/translate/_';
+import { Box, Hash, Link, Tag } from 'lucide-react';
 import PropTypes from 'prop-types';
 import React from 'react';
-import AttributeIcon from '@heroicons/react/solid/esm/HashtagIcon';
-import CategoryIcon from '@heroicons/react/solid/esm/LinkIcon';
-import CollectionIcon from '@heroicons/react/solid/esm/TagIcon';
-import ProductIcon from '@heroicons/react/solid/esm/ArchiveIcon';
-import NavigationItemGroup from '@components/admin/cms/NavigationItemGroup';
 
 export default function CatalogMenuGroup({
   productGrid,
@@ -15,27 +13,27 @@ export default function CatalogMenuGroup({
   return (
     <NavigationItemGroup
       id="catalogMenuGroup"
-      name="Catalog"
+      name={_('Catalog')}
       items={[
         {
-          Icon: ProductIcon,
+          Icon: Box,
           url: productGrid,
-          title: 'Products'
+          title: _('Products')
         },
         {
-          Icon: CategoryIcon,
+          Icon: Link,
           url: categoryGrid,
-          title: 'Categories'
+          title: _('Categories')
         },
         {
-          Icon: CollectionIcon,
+          Icon: Tag,
           url: collectionGrid,
-          title: 'Collections'
+          title: _('Collections')
         },
         {
-          Icon: AttributeIcon,
+          Icon: Hash,
           url: attributeGrid,
-          title: 'Attributes'
+          title: _('Attributes')
         }
       ]}
     />

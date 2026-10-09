@@ -1,8 +1,8 @@
-const { select, node } = require('@evershop/postgres-query-builder');
-const { camelCase } = require('@evershop/evershop/src/lib/util/camelCase');
-const { getConfig } = require('@evershop/evershop/src/lib/util/getConfig');
+import { node, select } from '@evershop/postgres-query-builder';
+import { camelCase } from '../../../../../lib/util/camelCase.js';
+import { getShowOutOfStockProducts } from '../../../services/catalogSettings.js';
 
-module.exports = {
+export default {
   Query: {
     featuredProducts: async (root, { limit = 4 }, { pool }) => {
       const query = select('product.product_id')
@@ -33,14 +33,23 @@ module.exports = {
         .on('cart_item.product_id', '=', 'product.product_id');
       query.where('product.status', '=', 1);
       query.andWhere('product.visibility', '=', 1);
-      if (getConfig('catalog.showOutOfStockProduct', false) === false) {
-        query
-          .andWhere('product_inventory.manage_stock', '=', false)
-          .addNode(
-            node('OR')
-              .addLeaf('AND', 'product_inventory.qty', '>', 0)
-              .addLeaf('AND', 'product_inventory.stock_availability', '=', true)
-          );
+      if (getShowOutOfStockProducts() === false) {
+        // Wrap the disjunction in its own node — see Variant.resolvers.js:
+        // the chained form let disabled/invisible products with stock leak
+        // into the featured list via the unguarded OR operand.
+        const stockFilter = node('AND');
+        stockFilter.addLeaf(
+          'AND',
+          'product_inventory.manage_stock',
+          '=',
+          false
+        );
+        stockFilter.addNode(
+          node('OR')
+            .addLeaf('AND', 'product_inventory.qty', '>', 0)
+            .addLeaf('AND', 'product_inventory.stock_availability', '=', true)
+        );
+        query.getWhere().addNode(stockFilter);
       }
       query.groupBy(
         'product.product_id',

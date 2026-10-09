@@ -2,12 +2,12 @@
 The `Category` type represents a category object.
 """
 type Category {
-  categoryId: ID!
+  categoryId: Int!
   uuid: String!
   name: String!
   status: Int!
-  includeInNav: Int!
-  description: String
+  showProducts: Int!
+  description: JSON
   urlKey: String
   metaTitle: String
   metaDescription: String
@@ -20,6 +20,7 @@ type Category {
   url: String
   availableAttributes: [FilterAttribute]
   priceRange: PriceRange
+  hasChildren: Boolean!
 }
 
 """
@@ -49,7 +50,7 @@ enum FilterOperation {
 input FilterInput {
   key: String!
   operation: FilterOperation!
-  value: String
+  value: ID
 }
 
 """
@@ -91,14 +92,17 @@ type CategoryCollection {
 
 type PriceRange {
   min: Float!
+  minText: String!
   max: Float!
+  maxText: String!
 }
 
 extend type Product {
-  category: Category,
+  category: Category
 }
 
 extend type Query {
   categories(filters: [FilterInput]): CategoryCollection
   category(id: Int): Category
+  currentCategory: Category
 }

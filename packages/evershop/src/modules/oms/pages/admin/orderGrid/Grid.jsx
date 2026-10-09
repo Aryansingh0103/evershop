@@ -1,22 +1,42 @@
-/* eslint-disable react/no-unstable-nested-components */
+import { GridPagination } from '@components/admin/grid/GridPagination';
+import { SortableHeader } from '@components/admin/grid/header/Sortable';
+import Area from '@components/common/Area';
+import { Form } from '@components/common/form/Form.js';
+import { InputField } from '@components/common/form/InputField.js';
+import { useAlertContext } from '@components/common/modal/Alert';
+import { Button } from '@components/common/ui/Button.js';
+import { ButtonGroup } from '@components/common/ui/ButtonGroup.js';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardAction
+} from '@components/common/ui/Card.js';
+import { Checkbox } from '@components/common/ui/Checkbox.js';
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue
+} from '@components/common/ui/Select.js';
+import {
+  Table,
+  TableHead,
+  TableHeader,
+  TableRow,
+  TableBody,
+  TableCell
+} from '@components/common/ui/Table.js';
+import { _ } from '@evershop/evershop/lib/locale/translate/_';
+import axios from 'axios';
 import PropTypes from 'prop-types';
 import React, { useState } from 'react';
-import axios from 'axios';
-import Area from '@components/common/Area';
-import Pagination from '@components/common/grid/Pagination';
-import { Checkbox } from '@components/common/form/fields/Checkbox';
-import { useAlertContext } from '@components/common/modal/Alert';
-import { Card } from '@components/admin/cms/Card';
-import OrderNumberRow from '@components/admin/oms/orderGrid/rows/OrderNumberRow';
-import BasicRow from '@components/common/grid/rows/BasicRow';
-import ShipmentStatusRow from '@components/admin/oms/orderGrid/rows/ShipmentStatus';
-import PaymentStatusRow from '@components/admin/oms/orderGrid/rows/PaymentStatus';
-import TotalRow from '@components/admin/oms/orderGrid/rows/TotalRow';
-import CreateAt from '@components/admin/customer/customerGrid/rows/CreateAt';
-import { Form } from '@components/common/form/Form';
-import { Field } from '@components/common/form/Field';
-import SortableHeader from '@components/common/grid/headers/Sortable';
-import Filter from '@components/common/list/Filter';
+import { OrderNumber } from './rows/OrderNumber.js';
+import { PaymentStatus } from './rows/PaymentStatus.js';
+import { ShipmentStatus } from './rows/ShipmentStatus.js';
 
 function Actions({ orders = [], selectedIds = [] }) {
   const { openAlert, closeAlert } = useAlertContext();
@@ -36,27 +56,28 @@ function Actions({ orders = [], selectedIds = [] }) {
 
   const actions = [
     {
-      name: 'Mark as shipped',
+      name: _('Mark as shipped'),
       onAction: () => {
         openAlert({
-          heading: `Fullfill ${selectedIds.length} orders`,
+          heading: _('Fulfill ${count} orders', { count: selectedIds.length }),
           content: (
-            <Checkbox
-              name="notify_customer"
-              label="Send notification to the customer"
-            />
+            <div className="form-field mb-0">
+              {_(
+                'Are you sure you want to mark the selected orders as shipped?'
+              )}
+            </div>
           ),
           primaryAction: {
-            title: 'Cancel',
+            title: _('Cancel'),
             onAction: closeAlert,
-            variant: 'default'
+            variant: 'secondary'
           },
           secondaryAction: {
-            title: 'Mark as shipped',
+            title: _('Mark as shipped'),
             onAction: async () => {
               await fullFillOrders();
             },
-            variant: 'primary',
+            variant: 'default',
             isLoading
           }
         });
@@ -65,30 +86,27 @@ function Actions({ orders = [], selectedIds = [] }) {
   ];
 
   return (
-    <tr>
+    <TableRow>
       {selectedIds.length === 0 && null}
       {selectedIds.length > 0 && (
-        <td style={{ borderTop: 0 }} colSpan="100">
-          <div className="inline-flex border border-divider rounded justify-items-start">
-            <a href="#" className="font-semibold pt-075 pb-075 pl-15 pr-15">
-              {selectedIds.length} selected
-            </a>
-            {actions.map((action) => (
-              <a
-                href="#"
+        <TableCell style={{ borderTop: 0 }} colSpan="100">
+          <ButtonGroup>
+            {actions.map((action, i) => (
+              <Button
+                key={i}
+                variant={'outline'}
                 onClick={(e) => {
                   e.preventDefault();
                   action.onAction();
                 }}
-                className="font-semibold pt-075 pb-075 pl-15 pr-15 block border-l border-divider self-center"
               >
-                <span>{action.name}</span>
-              </a>
+                {action.name}
+              </Button>
             ))}
-          </div>
-        </td>
+          </ButtonGroup>
+        </TableCell>
       )}
-    </tr>
+    </TableRow>
   );
 }
 
@@ -108,162 +126,49 @@ export default function OrderGrid({
   shipmentStatusList
 }) {
   const page = currentFilters.find((filter) => filter.key === 'page')
-    ? currentFilters.find((filter) => filter.key === 'page').value
+    ? parseInt(currentFilters.find((filter) => filter.key === 'page').value, 10)
     : 1;
 
   const limit = currentFilters.find((filter) => filter.key === 'limit')
-    ? currentFilters.find((filter) => filter.key === 'limit').value
+    ? parseInt(
+        currentFilters.find((filter) => filter.key === 'limit').value,
+        10
+      )
     : 20;
 
   const [selectedRows, setSelectedRows] = useState([]);
 
   return (
     <Card>
-      <Card.Session
-        title={
-          <Form submitBtn={false}>
-            <div className="flex gap-2 justify-center items-center">
-              <Area
-                id="orderGridFilter"
-                noOuter
-                coreComponents={[
-                  {
-                    component: {
-                      default: () => (
-                        <Field
-                          type="text"
-                          id="keyword"
-                          placeholder="Search"
-                          value={
-                            currentFilters.find((f) => f.key === 'keyword')
-                              ?.value
-                          }
-                          onKeyPress={(e) => {
-                            // If the user press enter, we should submit the form
-                            if (e.key === 'Enter') {
-                              const url = new URL(document.location);
-                              const keyword =
-                                document.getElementById('keyword')?.value;
-                              if (keyword) {
-                                url.searchParams.set('keyword', keyword);
-                              } else {
-                                url.searchParams.delete('keyword');
-                              }
-                              window.location.href = url;
-                            }
-                          }}
-                        />
-                      )
-                    },
-                    sortOrder: 5
-                  },
-                  {
-                    component: {
-                      default: () => (
-                        <Filter
-                          options={paymentStatusList.map((status) => ({
-                            label: status.name,
-                            value: status.code,
-                            onSelect: () => {
-                              const url = new URL(document.location);
-                              url.searchParams.set(
-                                'payment_status',
-                                status.code
-                              );
-                              window.location.href = url;
-                            }
-                          }))}
-                          selectedOption={
-                            currentFilters.find(
-                              (f) => f.key === 'payment_status'
-                            )
-                              ? currentFilters.find(
-                                  (f) => f.key === 'payment_status'
-                                ).value
-                              : undefined
-                          }
-                          title="Payment status"
-                        />
-                      )
-                    },
-                    sortOrder: 10
-                  },
-                  {
-                    component: {
-                      default: () => (
-                        <Filter
-                          options={shipmentStatusList.map((status) => ({
-                            label: status.name,
-                            value: status.code,
-                            onSelect: () => {
-                              const url = new URL(document.location);
-                              url.searchParams.set(
-                                'shipment_status',
-                                status.code
-                              );
-                              window.location.href = url;
-                            }
-                          }))}
-                          selectedOption={
-                            currentFilters.find(
-                              (f) => f.key === 'shipment_status'
-                            )
-                              ? currentFilters.find(
-                                  (f) => f.key === 'shipment_status'
-                                ).value
-                              : undefined
-                          }
-                          title="Shipment status"
-                        />
-                      )
-                    },
-                    sortOrder: 15
-                  }
-                ]}
-                currentFilters={currentFilters}
-              />
-            </div>
-          </Form>
-        }
-        actions={[
-          {
-            variant: 'interactive',
-            name: 'Clear filter',
-            onAction: () => {
-              // Just get the url and remove all query params
-              const url = new URL(document.location);
-              url.search = '';
-              window.location.href = url.href;
-            }
-          }
-        ]}
-      />
-      <table className="listing sticky">
-        <thead>
-          <tr>
-            <th className="align-bottom">
-              <Checkbox
-                onChange={(e) => {
-                  if (e.target.checked) {
-                    setSelectedRows(orders.map((o) => o.uuid));
-                  } else {
-                    setSelectedRows([]);
-                  }
-                }}
-              />
-            </th>
+      <CardHeader className="flex justify-between">
+        <Form submitBtn={false} id="orderGridFilter">
+          <div className="flex gap-5 justify-center items-center">
             <Area
-              className=""
-              id="orderGridHeader"
+              id="orderGridFilter"
               noOuter
               coreComponents={[
                 {
                   component: {
                     default: () => (
-                      <SortableHeader
-                        title="Order Number"
-                        name="number"
-                        currentFilters={currentFilters}
+                      <InputField
+                        name="keyword"
+                        placeholder={_('Search')}
+                        defaultValue={
+                          currentFilters.find((f) => f.key === 'keyword')?.value
+                        }
+                        onKeyPress={(e) => {
+                          // If the user press enter, we should submit the form
+                          if (e.key === 'Enter') {
+                            const url = new URL(document.location);
+                            const keyword = e.target?.value;
+                            if (keyword) {
+                              url.searchParams.set('keyword', keyword);
+                            } else {
+                              url.searchParams.delete('keyword');
+                            }
+                            window.location.href = url;
+                          }
+                        }}
                       />
                     )
                   },
@@ -272,11 +177,38 @@ export default function OrderGrid({
                 {
                   component: {
                     default: () => (
-                      <SortableHeader
-                        title="Date"
-                        name="created_at"
-                        currentFilters={currentFilters}
-                      />
+                      <>
+                        <Select
+                          value={
+                            currentFilters.find(
+                              (f) => f.key === 'payment_status'
+                            )
+                              ? currentFilters.find(
+                                  (f) => f.key === 'payment_status'
+                                ).value
+                              : undefined
+                          }
+                          onValueChange={(value) => {
+                            const url = new URL(document.location);
+                            url.searchParams.set('payment_status', value);
+                            window.location.href = url;
+                          }}
+                        >
+                          <SelectTrigger>
+                            <SelectValue>{_('Payment Status')}</SelectValue>
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectGroup>
+                              <SelectLabel>{_('Payment Status')}</SelectLabel>
+                              {paymentStatusList.map((status, index) => (
+                                <SelectItem key={index} value={status.code}>
+                                  {status.name}
+                                </SelectItem>
+                              ))}
+                            </SelectGroup>
+                          </SelectContent>
+                        </Select>
+                      </>
                     )
                   },
                   sortOrder: 10
@@ -284,89 +216,88 @@ export default function OrderGrid({
                 {
                   component: {
                     default: () => (
-                      <SortableHeader
-                        title="Customer Email"
-                        name="email"
-                        currentFilters={currentFilters}
-                      />
+                      <Select
+                        value={
+                          currentFilters.find(
+                            (f) => f.key === 'shipment_status'
+                          )
+                            ? currentFilters.find(
+                                (f) => f.key === 'shipment_status'
+                              ).value
+                            : undefined
+                        }
+                        onValueChange={(value) => {
+                          const url = new URL(document.location);
+                          url.searchParams.set('shipment_status', value);
+                          window.location.href = url;
+                        }}
+                      >
+                        <SelectTrigger>
+                          <SelectValue>{_('Shipment Status')}</SelectValue>
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectGroup>
+                            <SelectLabel>{_('Shipment Status')}</SelectLabel>
+                            {shipmentStatusList.map((status, index) => (
+                              <SelectItem key={index} value={status.code}>
+                                {status.name}
+                              </SelectItem>
+                            ))}
+                          </SelectGroup>
+                        </SelectContent>
+                      </Select>
                     )
                   },
                   sortOrder: 15
-                },
-                {
-                  component: {
-                    default: () => (
-                      <SortableHeader
-                        title="Shipment Status"
-                        name="shipment_status"
-                        currentFilters={currentFilters}
-                      />
-                    )
-                  },
-                  sortOrder: 20
-                },
-                {
-                  component: {
-                    default: () => (
-                      <SortableHeader
-                        title="Payment Status"
-                        name="payment_status"
-                        currentFilters={currentFilters}
-                      />
-                    )
-                  },
-                  sortOrder: 25
-                },
-                {
-                  component: {
-                    default: () => (
-                      <SortableHeader
-                        title="Total"
-                        name="total"
-                        currentFilters={currentFilters}
-                      />
-                    )
-                  },
-                  sortOrder: 30
                 }
               ]}
+              currentFilters={currentFilters}
             />
-          </tr>
-        </thead>
-        <tbody>
-          <Actions
-            orders={orders}
-            selectedIds={selectedRows}
-            setSelectedRows={setSelectedRows}
-          />
-          {orders.map((o) => (
-            <tr key={o.orderId}>
-              <td>
-                <Checkbox
-                  isChecked={selectedRows.includes(o.uuid)}
-                  onChange={(e) => {
-                    if (e.target.checked) {
-                      setSelectedRows(selectedRows.concat([o.uuid]));
-                    } else {
-                      setSelectedRows(
-                        selectedRows.filter((row) => row !== o.uuid)
-                      );
-                    }
-                  }}
-                />
-              </td>
+          </div>
+        </Form>
+        <CardAction>
+          <Button
+            variant="link"
+            className={'hover:cursor-pointer'}
+            onClick={() => {
+              const url = new URL(document.location);
+              url.search = '';
+              window.location.href = url.href;
+            }}
+          >
+            {_('Clear Filters')}
+          </Button>
+        </CardAction>
+      </CardHeader>
+      <CardContent>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>
+                <div className="form-field mb-0">
+                  <Checkbox
+                    onCheckedChange={(checked) => {
+                      if (checked) {
+                        setSelectedRows(orders.map((o) => o.uuid));
+                      } else {
+                        setSelectedRows([]);
+                      }
+                    }}
+                  />
+                </div>
+              </TableHead>
               <Area
                 className=""
-                id="orderGridRow"
-                row={o}
+                id="orderGridHeader"
                 noOuter
                 coreComponents={[
                   {
                     component: {
                       default: () => (
-                        <OrderNumberRow
-                          name={o.orderNumber}
-                          editUrl={o.editUrl}
+                        <SortableHeader
+                          title={_('Order Number')}
+                          name="number"
+                          currentFilters={currentFilters}
                         />
                       )
                     },
@@ -374,14 +305,24 @@ export default function OrderGrid({
                   },
                   {
                     component: {
-                      default: () => <CreateAt time={o.createdAt.text} />
+                      default: () => (
+                        <SortableHeader
+                          title={_('Date')}
+                          name="created_at"
+                          currentFilters={currentFilters}
+                        />
+                      )
                     },
                     sortOrder: 10
                   },
                   {
                     component: {
-                      default: ({ areaProps }) => (
-                        <BasicRow id="customerEmail" areaProps={areaProps} />
+                      default: () => (
+                        <SortableHeader
+                          title={_('Customer Email')}
+                          name="email"
+                          currentFilters={currentFilters}
+                        />
                       )
                     },
                     sortOrder: 15
@@ -389,7 +330,11 @@ export default function OrderGrid({
                   {
                     component: {
                       default: () => (
-                        <ShipmentStatusRow status={o.shipmentStatus} />
+                        <SortableHeader
+                          title={_('Shipment Status')}
+                          name="shipment_status"
+                          currentFilters={currentFilters}
+                        />
                       )
                     },
                     sortOrder: 20
@@ -397,29 +342,123 @@ export default function OrderGrid({
                   {
                     component: {
                       default: () => (
-                        <PaymentStatusRow status={o.paymentStatus} />
+                        <SortableHeader
+                          title={_('Payment Status')}
+                          name="payment_status"
+                          currentFilters={currentFilters}
+                        />
                       )
                     },
                     sortOrder: 25
                   },
                   {
                     component: {
-                      default: () => <TotalRow total={o.grandTotal.text} />
+                      default: () => (
+                        <SortableHeader
+                          title={_('Total')}
+                          name="total"
+                          currentFilters={currentFilters}
+                        />
+                      )
                     },
                     sortOrder: 30
                   }
                 ]}
               />
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      {orders.length === 0 && (
-        <div className="flex w-full justify-center">
-          There is no order to display
-        </div>
-      )}
-      <Pagination total={total} limit={limit} page={page} />
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            <Actions
+              orders={orders}
+              selectedIds={selectedRows}
+              setSelectedRows={setSelectedRows}
+            />
+            {orders.map((o) => (
+              <TableRow key={o.orderId}>
+                <TableCell>
+                  <div className="form-field mb-0">
+                    <Checkbox
+                      checked={selectedRows.includes(o.uuid)}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          setSelectedRows(selectedRows.concat([o.uuid]));
+                        } else {
+                          setSelectedRows(
+                            selectedRows.filter((row) => row !== o.uuid)
+                          );
+                        }
+                      }}
+                    />
+                  </div>
+                </TableCell>
+                <Area
+                  className=""
+                  id="orderGridRow"
+                  row={o}
+                  noOuter
+                  coreComponents={[
+                    {
+                      component: {
+                        default: () => (
+                          <OrderNumber
+                            number={o.orderNumber}
+                            editUrl={o.editUrl}
+                          />
+                        )
+                      },
+                      sortOrder: 5
+                    },
+                    {
+                      component: {
+                        default: () => <TableCell>{o.createdAt.text}</TableCell>
+                      },
+                      sortOrder: 10
+                    },
+                    {
+                      component: {
+                        default: ({ areaProps }) => (
+                          <TableCell>{o.customerEmail}</TableCell>
+                        )
+                      },
+                      sortOrder: 15
+                    },
+                    {
+                      component: {
+                        default: () => (
+                          <ShipmentStatus status={o.shipmentStatus} />
+                        )
+                      },
+                      sortOrder: 20
+                    },
+                    {
+                      component: {
+                        default: () => (
+                          <PaymentStatus status={o.paymentStatus} />
+                        )
+                      },
+                      sortOrder: 25
+                    },
+                    {
+                      component: {
+                        default: () => (
+                          <TableCell>{o.grandTotal.text}</TableCell>
+                        )
+                      },
+                      sortOrder: 30
+                    }
+                  ]}
+                />
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+        {orders.length === 0 && (
+          <div className="flex w-full justify-center">
+            {_('There is no order to display')}
+          </div>
+        )}
+        <GridPagination total={total} limit={limit} page={page} />
+      </CardContent>
     </Card>
   );
 }
@@ -428,7 +467,7 @@ OrderGrid.propTypes = {
   orders: PropTypes.shape({
     items: PropTypes.arrayOf(
       PropTypes.shape({
-        orderId: PropTypes.number.isRequired,
+        orderId: PropTypes.string.isRequired,
         uuid: PropTypes.string.isRequired,
         orderNumber: PropTypes.string.isRequired,
         createdAt: PropTypes.shape({
@@ -439,14 +478,12 @@ OrderGrid.propTypes = {
         shipmentStatus: PropTypes.shape({
           name: PropTypes.string.isRequired,
           code: PropTypes.string.isRequired,
-          badge: PropTypes.string.isRequired,
-          progress: PropTypes.number.isRequired
+          badge: PropTypes.string.isRequired
         }).isRequired,
         paymentStatus: PropTypes.shape({
           name: PropTypes.string.isRequired,
           code: PropTypes.string.isRequired,
-          badge: PropTypes.string.isRequired,
-          progress: PropTypes.number.isRequired
+          badge: PropTypes.string.isRequired
         }).isRequired,
         grandTotal: PropTypes.shape({
           value: PropTypes.number.isRequired,
@@ -500,13 +537,11 @@ export const query = `
           name
           code
           badge
-          progress
         }
         paymentStatus {
           name
           code
           badge
-          progress
         }
         grandTotal {
           value

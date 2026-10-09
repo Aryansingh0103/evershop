@@ -1,13 +1,34 @@
-/* eslint-disable camelcase */
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle
+} from '@components/common/ui/Card.js';
+import { toast } from '@components/common/ui/Sonner.js';
+import { _ } from '@evershop/evershop/lib/locale/translate/_';
 import PropTypes from 'prop-types';
 import React from 'react';
-import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
-import { toast } from 'react-toastify';
-import Dot from '@components/common/Dot';
-import { Card } from '@components/admin/cms/Card';
+import { Cell, Pie, PieChart, ResponsiveContainer } from 'recharts';
 import './Lifetimesales.scss';
 
 const COLORS = ['#aee9d1', '#fed3d1', '#a4e8f2'];
+
+const Dot = ({ variant }) => {
+  let bgColor = 'bg-gray-400';
+  if (variant === 'info') {
+    bgColor = 'bg-blue-400';
+  } else if (variant === 'success') {
+    bgColor = 'bg-green-400';
+  } else if (variant === 'critical') {
+    bgColor = 'bg-red-400';
+  }
+  return <span className={`w-3 h-3 rounded-full ${bgColor} inline-block`} />;
+};
+
+Dot.propTypes = {
+  variant: PropTypes.oneOf(['info', 'success', 'critical'])
+};
 
 export default function LifetimeSale({ api }) {
   const [data, setData] = React.useState({});
@@ -15,10 +36,10 @@ export default function LifetimeSale({ api }) {
   const { orders, total, completed_percentage, cancelled_percentage } = data;
 
   const chartData = [
-    { name: 'Completed', value: completed_percentage },
-    { name: 'Cancelled', value: cancelled_percentage },
+    { name: _('Completed'), value: completed_percentage },
+    { name: _('Cancelled'), value: cancelled_percentage },
     {
-      name: 'Others',
+      name: _('Others'),
       value: 100 - completed_percentage - cancelled_percentage
     }
   ];
@@ -45,49 +66,68 @@ export default function LifetimeSale({ api }) {
   if (fetching) {
     return (
       <Card title="Lifetime Sales">
-        <Card.Session>
+        <CardHeader>
+          <CardTitle>{_('Lifetime Sales')}</CardTitle>
+        </CardHeader>
+        <CardContent>
           <div className="skeleton-wrapper-lifetime">
             <div className="skeleton" />
             <div className="skeleton" />
             <div className="skeleton" />
             <div className="skeleton" />
           </div>
-        </Card.Session>
-        <Card.Session>
+        </CardContent>
+        <CardContent>
           <div className="skeleton-wrapper-lifetime">
             <div className="skeleton-chart" />
           </div>
-        </Card.Session>
+        </CardContent>
       </Card>
     );
   } else {
     return (
       <Card title="Lifetime Sales">
-        <Card.Session>
-          <div className="grid grid-cols-1 gap-1">
-            <div className="flex space-x-1 items-center">
+        <CardHeader>
+          <CardTitle>{_('Lifetime Sales')}</CardTitle>
+          <CardDescription>
+            {_(
+              'Overview of total sales and order status over the lifetime of your store'
+            )}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 gap-2">
+            <div className="flex space-x-2 items-center">
               <Dot variant="info" />
-              <div className="self-center">{orders} orders</div>
-            </div>
-            <div className="flex space-x-1 items-center">
-              <Dot variant="info" />
-              <div className="self-center">{total} lifetime sale</div>
-            </div>
-            <div className="flex space-x-1 items-center">
-              <Dot variant="success" />
               <div className="self-center">
-                {completed_percentage}% of orders completed
+                {_('${count} orders', { count: orders })}
               </div>
             </div>
-            <div className="flex space-x-1 items-center">
+            <div className="flex space-x-2 items-center">
+              <Dot variant="info" />
+              <div className="self-center">
+                {_('${total} lifetime sale', { total })}
+              </div>
+            </div>
+            <div className="flex space-x-2 items-center">
+              <Dot variant="success" />
+              <div className="self-center">
+                {_('${pct}% of orders completed', {
+                  pct: completed_percentage
+                })}
+              </div>
+            </div>
+            <div className="flex space-x-2 items-center">
               <Dot variant="critical" />
               <div className="self-center">
-                {cancelled_percentage}% of orders cancelled
+                {_('${pct}% of orders cancelled', {
+                  pct: cancelled_percentage
+                })}
               </div>
             </div>
           </div>
-        </Card.Session>
-        <Card.Session>
+        </CardContent>
+        <CardContent>
           <div style={{ height: '200px' }}>
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
@@ -98,20 +138,17 @@ export default function LifetimeSale({ api }) {
                   dataKey="value"
                   label
                 >
-                  {
-                    // eslint-disable-next-line react/no-array-index-key
-                    chartData.map((entry, index) => (
-                      <Cell
-                        key={`cell-${index}`}
-                        fill={COLORS[index % COLORS.length]}
-                      />
-                    ))
-                  }
+                  {chartData.map((entry, index) => (
+                    <Cell
+                      key={`cell-${index}`}
+                      fill={COLORS[index % COLORS.length]}
+                    />
+                  ))}
                 </Pie>
               </PieChart>
             </ResponsiveContainer>
           </div>
-        </Card.Session>
+        </CardContent>
       </Card>
     );
   }

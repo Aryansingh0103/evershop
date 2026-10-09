@@ -1,13 +1,12 @@
-const { getComponentsByRoute } = require('../../componee/getComponentsByRoute');
-const { parseGraphql } = require('../util/parseGraphql');
+import {
+  getAllRouteComponents,
+  getComponentsByRoute
+} from '../../componee/getComponentsByRoute.js';
+import { parseGraphql } from '../util/parseGraphql.js';
 
-// eslint-disable-next-line no-multi-assign
-module.exports = exports = {};
-
-exports.GraphqlPlugin = class GraphqlPlugin {
-  constructor(route, outputFile = undefined) {
-    this.route = route;
-    this.outputFile = outputFile || 'query.graphql';
+export const GraphqlPlugin = class GraphqlPlugin {
+  constructor(isAdmin = false) {
+    this.isAdmin = isAdmin;
     this.query = {};
     this.fragments = {};
     this.variables = [];
@@ -19,11 +18,18 @@ exports.GraphqlPlugin = class GraphqlPlugin {
 
     compiler.hooks.thisCompilation.tap('GraphqlPlugin', (compilation) => {
       // TODO: Can we get list of module without calling getComponentsByRoute again?
-      const components = getComponentsByRoute(this.route);
-      compilation.emitAsset(
-        this.outputFile,
-        new RawSource(JSON.stringify(parseGraphql(components)))
-      );
+      const components = getAllRouteComponents(this.isAdmin);
+
+      // Store one file per route instead of a single file
+      Object.keys(components).forEach((routeId) => {
+        const routeGraphqlQueries = parseGraphql(components[routeId]);
+        const filename = `query-${routeId}.graphql`;
+
+        compilation.emitAsset(
+          filename,
+          new RawSource(JSON.stringify(routeGraphqlQueries, null, 2))
+        );
+      });
     });
   }
 };

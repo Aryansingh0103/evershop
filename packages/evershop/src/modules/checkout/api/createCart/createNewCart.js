@@ -1,22 +1,21 @@
-const {
+import { select } from '@evershop/postgres-query-builder';
+import { translate } from '../../../../lib/locale/translate/translate.js';
+import { pool } from '../../../../lib/postgres/connection.js';
+import {
   INVALID_PAYLOAD,
   INTERNAL_SERVER_ERROR,
   OK
-} = require('@evershop/evershop/src/lib/util/httpStatus');
-const { getConfig } = require('@evershop/evershop/src/lib/util/getConfig');
-const { error } = require('@evershop/evershop/src/lib/log/logger');
-const {
-  translate
-} = require('@evershop/evershop/src/lib/locale/translate/translate');
-const { setContextValue } = require('../../../graphql/services/contextHelper');
-const { saveCart } = require('../../services/saveCart');
-const { Cart } = require('../../services/cart/Cart');
+} from '../../../../lib/util/httpStatus.js';
+import { setContextValue } from '../../../graphql/services/contextHelper.js';
+import { getStoreCurrency } from '../../../setting/services/setting.js';
+import { Cart } from '../../services/cart/Cart.js';
+import { saveCart } from '../../services/saveCart.js';
 
-module.exports = async (request, response, delegate, next) => {
+export default async (request, response, next) => {
   try {
     const { items, customer_full_name, customer_email } = request.body;
     const cartData = {
-      currency: getConfig('shop.currency', 'USD')
+      currency: getStoreCurrency()
     };
     if (customer_full_name) {
       cartData.customer_full_name = customer_full_name;
@@ -60,10 +59,35 @@ module.exports = async (request, response, delegate, next) => {
       },
       [{ sku: items[0].sku, qty: 0 }]
     );
+    const products = await select()
+      .from('product')
+      .where(
+        'sku',
+        'IN',
+        groupedItems.map((item) => item.sku)
+      )
+      .and('status', '=', 1)
+      .execute(pool);
+    // Check if all products are available
+    if (products.length !== groupedItems.length) {
+      response.status(INVALID_PAYLOAD);
+      response.json({
+        error: {
+          status: INVALID_PAYLOAD,
+          message: translate('Some products are not available')
+        }
+      });
+      return;
+    }
+    // Map the grouped items to include product_id
+    products.forEach((product) => {
+      const item = groupedItems.find((i) => i.sku === product.sku);
+      item.product_id = product.product_id;
+    });
     // Loop through the grouped items and add them to the cart
     const cartItems = await Promise.all(
       groupedItems.map(async (item) => {
-        const cartItem = await cart.addItem(item.sku, item.qty);
+        const cartItem = await cart.addItem(item.product_id, item.qty);
         return cartItem;
       })
     );
@@ -80,7 +104,6 @@ module.exports = async (request, response, delegate, next) => {
     };
     next();
   } catch (e) {
-    error(e);
     response.status(INTERNAL_SERVER_ERROR);
     response.json({
       error: {

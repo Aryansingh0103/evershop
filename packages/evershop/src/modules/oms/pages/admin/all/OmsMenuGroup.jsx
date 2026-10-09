@@ -1,18 +1,19 @@
+import { NavigationItemGroup } from '@components/admin/NavigationItemGroup.js';
+import { _ } from '@evershop/evershop/lib/locale/translate/_';
+import { Package } from 'lucide-react';
 import PropTypes from 'prop-types';
 import React from 'react';
-import Icon from '@heroicons/react/solid/esm/CubeIcon';
-import NavigationItemGroup from '@components/admin/cms/NavigationItemGroup';
 
 export default function OmsMenuGroup({ orderGrid }) {
   return (
     <NavigationItemGroup
       id="omsMenuGroup"
-      name="Sale"
+      name={_('Sale')}
       items={[
         {
-          Icon,
+          Icon: Package,
           url: orderGrid,
-          title: 'Orders'
+          title: _('Orders')
         }
       ]}
     />
